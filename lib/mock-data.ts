@@ -14,6 +14,12 @@ export const MOCK_SETTINGS: SettingsMap = {
   horario: "Todos los días de 6:00 PM a 4:00 AM",
   direccion: "Av. 17 de Diciembre, Frente a la Firestone, 1er Local",
   ciudad: "Ciudad Bolívar, Venezuela",
+  pago_pagomovil: "",
+  pago_zelle: "",
+  pago_binance: "",
+  pago_transferencia: "",
+  pago_efectivo_usd: "",
+  pago_efectivo_bs: "",
 };
 
 export const MOCK_CATEGORIAS: Categoria[] = [

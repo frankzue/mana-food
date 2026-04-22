@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { summarizeModifiers } from "@/lib/modifiers";
+import { OrderSuccessModal } from "./OrderSuccessModal";
 
 type Props = {
   zonas: ZonaDelivery[];
@@ -102,6 +103,11 @@ export function CheckoutForm({ zonas, tasaBs, ivaRate, demoMode }: Props) {
   });
 
   const [error, setError] = useState<string | null>(null);
+  const [successInfo, setSuccessInfo] = useState<{
+    numero: number;
+    telefono: string;
+    metodoPago: string;
+  } | null>(null);
 
   useEffect(() => {
     const p = loadProfile();
@@ -190,15 +196,19 @@ export function CheckoutForm({ zonas, tasaBs, ivaRate, demoMode }: Props) {
           return;
         }
 
+        setSuccessInfo({
+          numero: Number(data.numero),
+          telefono: form.cliente_telefono.trim(),
+          metodoPago: form.metodo_pago || "",
+        });
         clear();
-        router.push(`/success/${data.pedido_id}`);
       } catch {
         setError("Error de red. Intenta de nuevo.");
       }
     });
   }
 
-  if (items.length === 0) {
+  if (items.length === 0 && !successInfo) {
     return (
       <div className="container py-16 text-center">
         <div className="text-6xl mb-4">🛒</div>
@@ -212,6 +222,18 @@ export function CheckoutForm({ zonas, tasaBs, ivaRate, demoMode }: Props) {
           Ir al menú
         </Link>
       </div>
+    );
+  }
+
+  if (successInfo) {
+    return (
+      <OrderSuccessModal
+        open
+        numero={successInfo.numero}
+        telefono={successInfo.telefono}
+        metodoPago={successInfo.metodoPago}
+        onClose={() => setSuccessInfo(null)}
+      />
     );
   }
 

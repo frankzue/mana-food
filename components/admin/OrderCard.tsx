@@ -2,7 +2,11 @@
 
 import type { PedidoConItems, EstadoPedido } from "@/types/database";
 import { formatBs, formatUSD } from "@/lib/utils";
-import { buildWhatsAppLink, buildWhatsAppMessage } from "@/lib/utils/whatsapp";
+import {
+  buildWhatsAppLink,
+  buildWhatsAppMessage,
+  type PaymentDetails,
+} from "@/lib/utils/whatsapp";
 import {
   CheckCircle2,
   Clock,
@@ -13,15 +17,18 @@ import {
   CreditCard,
   StickyNote,
   XCircle,
+  Copy,
+  Check,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 
 type Props = {
   pedido: PedidoConItems;
   businessName: string;
+  payment: PaymentDetails;
 };
 
 const estadoConfig: Record<
@@ -58,8 +65,9 @@ function formatTime(iso: string): string {
   });
 }
 
-export function OrderCard({ pedido, businessName }: Props) {
+export function OrderCard({ pedido, businessName, payment }: Props) {
   const [isPending, startTransition] = useTransition();
+  const [copied, setCopied] = useState(false);
   const router = useRouter();
 
   const estado = estadoConfig[pedido.estado];
@@ -76,10 +84,34 @@ export function OrderCard({ pedido, businessName }: Props) {
   }
 
   function handleContactar() {
-    const msg = buildWhatsAppMessage(pedido, businessName);
+    const msg = buildWhatsAppMessage(pedido, businessName, payment);
     const link = buildWhatsAppLink(pedido.cliente_telefono, msg);
     window.open(link, "_blank", "noopener,noreferrer");
     if (pedido.estado === "nuevo") updateEstado("contactado");
+  }
+
+  async function handleCopy() {
+    const msg = buildWhatsAppMessage(pedido, businessName, payment);
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(msg);
+      } else {
+        // Fallback para contextos sin Clipboard API
+        const ta = document.createElement("textarea");
+        ta.value = msg;
+        ta.style.position = "fixed";
+        ta.style.opacity = "0";
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        document.execCommand("copy");
+        document.body.removeChild(ta);
+      }
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
+    } catch {
+      // silent
+    }
   }
 
   return (
@@ -182,6 +214,27 @@ export function OrderCard({ pedido, businessName }: Props) {
           className="flex-1 min-w-[140px] inline-flex items-center justify-center gap-1.5 rounded-full bg-[#25D366] px-4 py-2.5 font-semibold text-white shadow-mana-soft transition hover:brightness-95 active:scale-95"
         >
           <MessageCircle className="h-4 w-4" /> Contactar Cliente
+        </button>
+
+        <button
+          onClick={handleCopy}
+          className={[
+            "inline-flex items-center gap-1.5 rounded-full px-3 py-2.5 text-sm font-semibold transition ring-1 active:scale-95",
+            copied
+              ? "bg-mana-success text-white ring-mana-success"
+              : "bg-white text-mana-ink ring-black/10 hover:ring-mana-red/40",
+          ].join(" ")}
+          title="Copiar resumen del pedido (con datos de pago) para pegar en WhatsApp"
+        >
+          {copied ? (
+            <>
+              <Check className="h-4 w-4" /> Copiado
+            </>
+          ) : (
+            <>
+              <Copy className="h-4 w-4" /> Copiar
+            </>
+          )}
         </button>
 
         {pedido.estado !== "completado" && (

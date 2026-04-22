@@ -61,6 +61,14 @@ export default async function AdminPage() {
           <OrdersBoard
             initialPedidos={initial}
             businessName={settings.nombre_negocio}
+            payment={{
+              pago_pagomovil: settings.pago_pagomovil,
+              pago_zelle: settings.pago_zelle,
+              pago_binance: settings.pago_binance,
+              pago_transferencia: settings.pago_transferencia,
+              pago_efectivo_usd: settings.pago_efectivo_usd,
+              pago_efectivo_bs: settings.pago_efectivo_bs,
+            }}
           />
         </div>
       </main>

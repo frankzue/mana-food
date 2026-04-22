@@ -81,4 +81,12 @@ export type SettingsMap = {
   horario: string;
   direccion: string;
   ciudad: string;
+  // Datos de pago que el admin copia al mensaje de WhatsApp.
+  // Se configuran en la tabla `configuracion` con estas mismas keys.
+  pago_pagomovil: string;
+  pago_zelle: string;
+  pago_binance: string;
+  pago_transferencia: string;
+  pago_efectivo_usd: string;
+  pago_efectivo_bs: string;
 };

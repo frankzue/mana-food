@@ -1,4 +1,5 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import type {
   Categoria,
   Producto,
@@ -25,12 +26,8 @@ export async function getSettings(): Promise<SettingsMap> {
 
   try {
     const supabase = createSupabaseServerClient();
-    const { data, error } = await supabase.from("configuracion").select("key, value");
-    if (error) console.error("[getSettings] supabase error:", error);
-    if (!data || data.length === 0) {
-      console.warn("[getSettings] empty result, using MOCK_SETTINGS");
-      return MOCK_SETTINGS;
-    }
+    const { data } = await supabase.from("configuracion").select("key, value");
+    if (!data || data.length === 0) return MOCK_SETTINGS;
 
     const map: Record<string, string> = {};
     for (const row of data) map[row.key] = row.value;
@@ -46,9 +43,17 @@ export async function getSettings(): Promise<SettingsMap> {
       horario: map.horario ?? MOCK_SETTINGS.horario,
       direccion: map.direccion ?? MOCK_SETTINGS.direccion,
       ciudad: map.ciudad ?? MOCK_SETTINGS.ciudad,
+      pago_pagomovil: map.pago_pagomovil ?? MOCK_SETTINGS.pago_pagomovil,
+      pago_zelle: map.pago_zelle ?? MOCK_SETTINGS.pago_zelle,
+      pago_binance: map.pago_binance ?? MOCK_SETTINGS.pago_binance,
+      pago_transferencia:
+        map.pago_transferencia ?? MOCK_SETTINGS.pago_transferencia,
+      pago_efectivo_usd:
+        map.pago_efectivo_usd ?? MOCK_SETTINGS.pago_efectivo_usd,
+      pago_efectivo_bs:
+        map.pago_efectivo_bs ?? MOCK_SETTINGS.pago_efectivo_bs,
     };
-  } catch (err) {
-    console.error("[getSettings] threw:", err);
+  } catch {
     return MOCK_SETTINGS;
   }
 }
@@ -57,19 +62,14 @@ export async function getCategorias(): Promise<Categoria[]> {
   if (!hasSupabaseEnv()) return MOCK_CATEGORIAS;
   try {
     const supabase = createSupabaseServerClient();
-    const { data, error } = await supabase
+    const { data } = await supabase
       .from("categorias")
       .select("*")
       .eq("activo", true)
       .order("orden", { ascending: true });
-    if (error) console.error("[getCategorias] supabase error:", error);
-    if (!data || data.length === 0) {
-      console.warn("[getCategorias] empty result, using MOCK_CATEGORIAS");
-      return MOCK_CATEGORIAS;
-    }
+    if (!data || data.length === 0) return MOCK_CATEGORIAS;
     return data as Categoria[];
-  } catch (err) {
-    console.error("[getCategorias] threw:", err);
+  } catch {
     return MOCK_CATEGORIAS;
   }
 }
@@ -78,22 +78,17 @@ export async function getProductos(): Promise<Producto[]> {
   if (!hasSupabaseEnv()) return MOCK_PRODUCTOS;
   try {
     const supabase = createSupabaseServerClient();
-    const { data, error } = await supabase
+    const { data } = await supabase
       .from("productos")
       .select("*")
       .eq("disponible", true)
       .order("orden", { ascending: true });
-    if (error) console.error("[getProductos] supabase error:", error);
-    if (!data || data.length === 0) {
-      console.warn("[getProductos] empty result, using MOCK_PRODUCTOS");
-      return MOCK_PRODUCTOS;
-    }
+    if (!data || data.length === 0) return MOCK_PRODUCTOS;
     return data.map((p) => ({
       ...p,
       precio_usd: Number(p.precio_usd),
     })) as Producto[];
-  } catch (err) {
-    console.error("[getProductos] threw:", err);
+  } catch {
     return MOCK_PRODUCTOS;
   }
 }
@@ -102,22 +97,17 @@ export async function getZonas(): Promise<ZonaDelivery[]> {
   if (!hasSupabaseEnv()) return MOCK_ZONAS;
   try {
     const supabase = createSupabaseServerClient();
-    const { data, error } = await supabase
+    const { data } = await supabase
       .from("zonas_delivery")
       .select("*")
       .eq("activo", true)
       .order("orden", { ascending: true });
-    if (error) console.error("[getZonas] supabase error:", error);
-    if (!data || data.length === 0) {
-      console.warn("[getZonas] empty result, using MOCK_ZONAS");
-      return MOCK_ZONAS;
-    }
+    if (!data || data.length === 0) return MOCK_ZONAS;
     return data.map((z) => ({
       ...z,
       costo_envio_usd: Number(z.costo_envio_usd),
     })) as ZonaDelivery[];
-  } catch (err) {
-    console.error("[getZonas] threw:", err);
+  } catch {
     return MOCK_ZONAS;
   }
 }
@@ -126,8 +116,11 @@ export async function getPedidoConItems(
   id: string
 ): Promise<PedidoConItems | null> {
   if (!hasSupabaseEnv()) return null;
+  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) return null;
   try {
-    const supabase = createSupabaseServerClient();
+    // Usamos el cliente admin porque RLS bloquea SELECT de pedidos a usuarios
+    // no autenticados. Este cliente solo corre en Server Components / API Routes.
+    const supabase = createSupabaseAdminClient();
     const { data: pedido } = await supabase
       .from("pedidos")
       .select("*")
