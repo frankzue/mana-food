@@ -1,8 +1,9 @@
 import Link from "next/link";
-import { ArrowLeft, Wallet } from "lucide-react";
+import { ArrowLeft, LineChart } from "lucide-react";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getSettings } from "@/lib/queries";
 import { AdminHeader } from "@/components/admin/AdminHeader";
+import { FinanzasSubNav } from "@/components/admin/FinanzasSubNav";
 import type { Pedido, CierreCaja } from "@/types/database";
 import { CajaBoard } from "./CajaBoard";
 
@@ -38,20 +39,23 @@ export default async function AdminCajaPage() {
       <AdminHeader email={user?.email} />
       <main className="min-h-screen bg-mana-cream">
         <div className="container py-5 space-y-5">
-          <div>
+          <div className="space-y-3">
             <Link
               href="/admin"
               className="inline-flex items-center gap-1 text-xs text-mana-muted hover:text-mana-ink transition"
             >
               <ArrowLeft className="h-3.5 w-3.5" /> Volver a pedidos
             </Link>
-            <h2 className="font-display text-2xl font-black text-mana-ink mt-1 flex items-center gap-2">
-              <Wallet className="h-6 w-6 text-mana-red" />
-              Cierre de caja
-            </h2>
-            <p className="text-sm text-mana-muted">
-              Resumen del día + cuadre contra efectivo contado físicamente.
-            </p>
+            <div>
+              <h2 className="font-display text-2xl font-black text-mana-ink flex items-center gap-2">
+                <LineChart className="h-6 w-6 text-mana-red" />
+                Finanzas
+              </h2>
+              <p className="text-sm text-mana-muted">
+                Resumen del día + cuadre contra efectivo contado físicamente.
+              </p>
+            </div>
+            <FinanzasSubNav />
           </div>
 
           <CajaBoard

@@ -9,7 +9,6 @@ import {
   ListOrdered,
   LineChart,
   Users,
-  Wallet,
   type LucideIcon,
 } from "lucide-react";
 
@@ -24,7 +23,12 @@ type NavItem = {
   activePrefix: string;
 };
 
-const NAV: NavItem[] = [
+type NavItemWithAliases = NavItem & {
+  /** Otros prefijos que también deben activar este item (ej. Finanzas engloba Ventas y Caja). */
+  alsoActiveOn?: string[];
+};
+
+const NAV: NavItemWithAliases[] = [
   {
     href: "/admin",
     label: "Pedidos",
@@ -32,16 +36,14 @@ const NAV: NavItem[] = [
     activePrefix: "/admin",
   },
   {
+    // "Finanzas" agrupa Ventas (reportes) y Caja (cierre diario): son el mismo
+    // tema (dinero) y comparten sub-navegación en sus páginas.
+    // Por defecto lleva a Ventas, que es la vista más usada.
     href: "/admin/ventas",
-    label: "Ventas",
+    label: "Finanzas",
     icon: LineChart,
     activePrefix: "/admin/ventas",
-  },
-  {
-    href: "/admin/caja",
-    label: "Caja",
-    icon: Wallet,
-    activePrefix: "/admin/caja",
+    alsoActiveOn: ["/admin/caja"],
   },
   {
     href: "/admin/clientes",
@@ -51,7 +53,7 @@ const NAV: NavItem[] = [
   },
   {
     href: "/admin/settings",
-    label: "Config.",
+    label: "Config",
     icon: Settings,
     activePrefix: "/admin/settings",
   },
@@ -61,11 +63,13 @@ export function AdminHeader({ email }: Props) {
   const pathname = usePathname() ?? "";
 
   // "Pedidos" (/admin) solo queda activo cuando NO estamos en subrutas
-  function isActive(item: NavItem): boolean {
+  function isActive(item: NavItemWithAliases): boolean {
     if (item.href === "/admin") {
       return pathname === "/admin";
     }
-    return pathname.startsWith(item.activePrefix);
+    if (pathname.startsWith(item.activePrefix)) return true;
+    if (item.alsoActiveOn?.some((p) => pathname.startsWith(p))) return true;
+    return false;
   }
 
   return (
@@ -96,6 +100,9 @@ export function AdminHeader({ email }: Props) {
           {NAV.map((item) => {
             const active = isActive(item);
             const Icon = item.icon;
+            // Config: en móvil se muestra sólo como icono (ahorra espacio);
+            // el resto siempre muestra su etiqueta.
+            const labelOnlyDesktop = item.href === "/admin/settings";
             return (
               <Link
                 key={item.href}
@@ -107,9 +114,12 @@ export function AdminHeader({ email }: Props) {
                     : "bg-white/10 text-white ring-white/20 hover:bg-white/15",
                 ].join(" ")}
                 title={item.label}
+                aria-label={item.label}
               >
                 <Icon className="h-3.5 w-3.5" />
-                <span>{item.label}</span>
+                <span className={labelOnlyDesktop ? "hidden sm:inline" : ""}>
+                  {item.label}
+                </span>
               </Link>
             );
           })}
@@ -117,8 +127,9 @@ export function AdminHeader({ email }: Props) {
           <form action="/admin/logout" method="POST" className="ml-1">
             <button
               type="submit"
-              className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1.5 text-xs font-semibold text-white ring-1 ring-white/20 hover:bg-white/15 transition"
+              className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-2.5 sm:px-3 py-1.5 text-xs font-semibold text-white ring-1 ring-white/20 hover:bg-white/15 transition"
               title={email ?? "Salir"}
+              aria-label="Salir"
             >
               <LogOut className="h-3.5 w-3.5" />
               <span className="hidden sm:inline">Salir</span>

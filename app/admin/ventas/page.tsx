@@ -3,6 +3,7 @@ import { ArrowLeft, LineChart } from "lucide-react";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getSettings } from "@/lib/queries";
 import { AdminHeader } from "@/components/admin/AdminHeader";
+import { FinanzasSubNav } from "@/components/admin/FinanzasSubNav";
 import type { Pedido, PedidoItem } from "@/types/database";
 import { VentasDashboard, type ProductoCostEntry } from "./VentasDashboard";
 
@@ -61,21 +62,23 @@ export default async function AdminVentasPage() {
       <AdminHeader email={user?.email} />
       <main className="min-h-screen bg-mana-cream">
         <div className="container py-5 space-y-5 print:py-0">
-          <div className="print:hidden">
+          <div className="print:hidden space-y-3">
             <Link
               href="/admin"
               className="inline-flex items-center gap-1 text-xs text-mana-muted hover:text-mana-ink transition"
             >
               <ArrowLeft className="h-3.5 w-3.5" /> Volver a pedidos
             </Link>
-            <h2 className="font-display text-2xl font-black text-mana-ink mt-1 flex items-center gap-2">
-              <LineChart className="h-6 w-6 text-mana-red" />
-              Ventas y reportes
-            </h2>
-            <p className="text-sm text-mana-muted">
-              Todos los pedidos están guardados en la base de datos
-              permanentemente.
-            </p>
+            <div>
+              <h2 className="font-display text-2xl font-black text-mana-ink flex items-center gap-2">
+                <LineChart className="h-6 w-6 text-mana-red" />
+                Finanzas
+              </h2>
+              <p className="text-sm text-mana-muted">
+                Reportes de ventas, margen y cierres diarios.
+              </p>
+            </div>
+            <FinanzasSubNav />
           </div>
 
           <VentasDashboard
