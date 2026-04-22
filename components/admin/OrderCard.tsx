@@ -492,8 +492,12 @@ function OrderActions({
         </button>
       )}
 
-      {/* Fila secundaria: WhatsApp + iconos de excepción */}
-      <div className="flex items-center gap-1.5">
+      {/* Fila secundaria: WhatsApp + acciones de excepción.
+          Todos los botones SIEMPRE muestran su etiqueta (no dependemos de
+          ancho de pantalla) para que el empleado no tenga que adivinar qué
+          hace cada icono. Usamos estilo neutro "gris claro moderno" en los
+          de excepción, sólo cambiando color al hacer hover. */}
+      <div className="flex flex-wrap items-center gap-1.5">
         {showWhatsApp && (
           <button
             onClick={onContactar}
@@ -507,14 +511,14 @@ function OrderActions({
             title="Abrir chat de WhatsApp con el cliente"
           >
             <MessageCircle className="h-3.5 w-3.5" />
-            <span className="hidden xs:inline sm:inline">WhatsApp</span>
+            <span>WhatsApp</span>
           </button>
         )}
 
         <button
           onClick={onCopiar}
           className={[
-            "inline-flex items-center justify-center gap-1 rounded-lg px-2.5 py-2 text-[11px] font-bold transition ring-1 active:scale-[0.98]",
+            "inline-flex items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-[11px] font-bold transition ring-1 active:scale-[0.98]",
             copied
               ? "bg-mana-success text-white ring-mana-success"
               : "bg-white text-mana-muted ring-black/10 hover:text-mana-ink hover:ring-mana-ink/30",
@@ -522,9 +526,15 @@ function OrderActions({
           title="Copiar el mensaje completo (por si WhatsApp no abre)"
         >
           {copied ? (
-            <Check className="h-3.5 w-3.5" />
+            <>
+              <Check className="h-3.5 w-3.5" />
+              <span>Copiado</span>
+            </>
           ) : (
-            <Copy className="h-3.5 w-3.5" />
+            <>
+              <Copy className="h-3.5 w-3.5" />
+              <span>Copiar</span>
+            </>
           )}
         </button>
 
@@ -534,22 +544,22 @@ function OrderActions({
           <button
             onClick={onAbrirDevolucion}
             disabled={isPending}
-            className="inline-flex items-center gap-1 rounded-lg bg-white px-2.5 py-2 text-[11px] font-bold text-orange-600 ring-1 ring-orange-200 hover:bg-orange-50 transition active:scale-[0.98] disabled:opacity-50"
-            title="Registrar devolución de dinero"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-gray-100 px-3 py-2 text-[11px] font-bold text-gray-600 ring-1 ring-gray-200 hover:bg-orange-50 hover:text-orange-600 hover:ring-orange-200 transition active:scale-[0.98] disabled:opacity-50"
+            title="Registrar devolución de dinero al cliente"
           >
             <Undo2 className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">Devolver</span>
+            <span>Devolución</span>
           </button>
         )}
         {showCancelar && (
           <button
             onClick={onCancelar}
             disabled={isPending}
-            className="inline-flex items-center gap-1 rounded-lg bg-white px-2.5 py-2 text-[11px] font-bold text-mana-muted ring-1 ring-black/10 hover:text-red-600 hover:ring-red-300 hover:bg-red-50 transition active:scale-[0.98] disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-gray-100 px-3 py-2 text-[11px] font-bold text-gray-600 ring-1 ring-gray-200 hover:bg-red-50 hover:text-red-600 hover:ring-red-200 transition active:scale-[0.98] disabled:opacity-50"
             title="Cancelar pedido"
           >
             <XCircle className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">Cancelar</span>
+            <span>Cancelar</span>
           </button>
         )}
       </div>
