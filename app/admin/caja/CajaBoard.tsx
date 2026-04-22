@@ -4,6 +4,7 @@ import { useMemo, useState, useTransition } from "react";
 import type { Pedido, CierreCaja } from "@/types/database";
 import { formatBs, formatUSD } from "@/lib/utils";
 import { useRouter } from "next/navigation";
+import { generateCierrePdf } from "@/lib/utils/pdf";
 import {
   Wallet,
   CheckCircle2,
@@ -11,12 +12,14 @@ import {
   Loader2,
   Calculator,
   History,
+  FileDown,
 } from "lucide-react";
 
 type Props = {
   pedidos: Pedido[];
   cierres: CierreCaja[];
   tasaBs: number;
+  businessName?: string;
 };
 
 function toDateKey(d: Date): string {
@@ -30,7 +33,12 @@ function isSameLocalDay(iso: string, dayKey: string): boolean {
   return toDateKey(new Date(iso)) === dayKey;
 }
 
-export function CajaBoard({ pedidos, cierres, tasaBs }: Props) {
+export function CajaBoard({
+  pedidos,
+  cierres,
+  tasaBs,
+  businessName = "Maná Fast Food",
+}: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const today = toDateKey(new Date());
@@ -40,6 +48,7 @@ export function CajaBoard({ pedidos, cierres, tasaBs }: Props) {
   const [notas, setNotas] = useState<string>("");
   const [saved, setSaved] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [pdfLoading, setPdfLoading] = useState(false);
 
   const delDia = useMemo(
     () => pedidos.filter((p) => isSameLocalDay(p.created_at, selectedDay)),
@@ -135,6 +144,39 @@ export function CajaBoard({ pedidos, cierres, tasaBs }: Props) {
     () => cierres.find((c) => c.fecha === selectedDay),
     [cierres, selectedDay]
   );
+
+  async function handleDownloadPdf() {
+    setPdfLoading(true);
+    try {
+      await generateCierrePdf({
+        businessName,
+        fecha: selectedDay,
+        cerradoPor: existeCierre?.cerrado_por ?? null,
+        ventasBrutas: stats.brutas,
+        ventasNetas: stats.netas,
+        devoluciones: stats.devUsd,
+        propinas: stats.propinas,
+        envios: stats.envios,
+        pedidos: stats.pedidosCount,
+        completados: stats.completados,
+        devueltos: stats.devueltos,
+        cancelados: stats.cancelados,
+        desgloseMetodo: stats.desgloseMetodo,
+        efectivoUsdContado: contadoUsd > 0 ? contadoUsd : existeCierre?.efectivo_usd_contado ?? null,
+        efectivoBsContado: contadoBs > 0 ? contadoBs : existeCierre?.efectivo_bs_contado ?? null,
+        tasaBs,
+        diferenciaUsd,
+        esperadoEfectivoUsd: esperadoUsd,
+        esperadoEfectivoBs: esperadoBs,
+        notas: notas.trim() || existeCierre?.notas || null,
+      });
+    } catch (err) {
+      console.error("PDF cierre", err);
+      alert("No se pudo generar el PDF. Intenta de nuevo.");
+    } finally {
+      setPdfLoading(false);
+    }
+  }
 
   async function handleCierre() {
     setError(null);
@@ -379,24 +421,43 @@ export function CajaBoard({ pedidos, cierres, tasaBs }: Props) {
           </div>
         )}
 
-        <button
-          onClick={handleCierre}
-          disabled={isPending || stats.pedidosCount === 0}
-          className="btn-primary w-full sm:w-auto"
-        >
-          {isPending ? (
-            <>
-              <Loader2 className="h-4 w-4 animate-spin" /> Guardando...
-            </>
-          ) : (
-            <>
-              <Wallet className="h-4 w-4" />
-              {existeCierre
-                ? "Actualizar cierre"
-                : `Cerrar día (${selectedDay})`}
-            </>
-          )}
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={handleCierre}
+            disabled={isPending || stats.pedidosCount === 0}
+            className="btn-primary flex-1 sm:flex-initial sm:min-w-[220px]"
+          >
+            {isPending ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" /> Guardando...
+              </>
+            ) : (
+              <>
+                <Wallet className="h-4 w-4" />
+                {existeCierre
+                  ? "Actualizar cierre"
+                  : `Cerrar día (${selectedDay})`}
+              </>
+            )}
+          </button>
+
+          <button
+            onClick={handleDownloadPdf}
+            disabled={pdfLoading || stats.pedidosCount === 0}
+            className="inline-flex items-center gap-2 rounded-full bg-white text-mana-ink ring-1 ring-black/10 px-4 py-3 font-bold text-sm transition hover:ring-mana-red/40 active:scale-[0.98] disabled:opacity-50"
+            title="Descargar el resumen del día en PDF"
+          >
+            {pdfLoading ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" /> Generando...
+              </>
+            ) : (
+              <>
+                <FileDown className="h-4 w-4" /> Descargar PDF
+              </>
+            )}
+          </button>
+        </div>
       </section>
 
       {/* Histórico de cierres */}
@@ -425,14 +486,14 @@ export function CajaBoard({ pedidos, cierres, tasaBs }: Props) {
                   <th className="text-right px-3 py-2 hidden md:table-cell">
                     Diferencia
                   </th>
+                  <th className="text-right px-3 py-2">Acciones</th>
                 </tr>
               </thead>
               <tbody>
                 {cierres.map((c) => (
                   <tr
                     key={c.id}
-                    className="border-t border-black/5 hover:bg-mana-cream/50 cursor-pointer"
-                    onClick={() => setSelectedDay(c.fecha)}
+                    className="border-t border-black/5 hover:bg-mana-cream/50 transition"
                   >
                     <td className="px-3 py-2">
                       <div className="font-semibold text-mana-ink">
@@ -476,6 +537,22 @@ export function CajaBoard({ pedidos, cierres, tasaBs }: Props) {
                         <span className="text-mana-muted">—</span>
                       )}
                     </td>
+                    <td className="px-3 py-2 text-right whitespace-nowrap">
+                      <button
+                        onClick={() => setSelectedDay(c.fecha)}
+                        className="inline-flex items-center gap-1 rounded-full bg-white text-mana-ink ring-1 ring-black/10 px-2.5 py-1 text-[11px] font-bold hover:ring-mana-red/40 transition"
+                        title="Ver este día"
+                      >
+                        Ver
+                      </button>
+                      <button
+                        onClick={() => downloadPastCierre(c, businessName, tasaBs)}
+                        className="ml-1 inline-flex items-center gap-1 rounded-full bg-mana-red text-white px-2.5 py-1 text-[11px] font-bold hover:brightness-95 transition"
+                        title="Descargar PDF de este cierre"
+                      >
+                        <FileDown className="h-3 w-3" /> PDF
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -485,6 +562,50 @@ export function CajaBoard({ pedidos, cierres, tasaBs }: Props) {
       </section>
     </div>
   );
+}
+
+/** Descarga el PDF de un cierre guardado (fila de la tabla "Últimos cierres"). */
+async function downloadPastCierre(
+  c: CierreCaja,
+  businessName: string,
+  tasaBsFallback: number
+): Promise<void> {
+  const tasa = c.tasa_bs ?? tasaBsFallback;
+  const esperadoUsd =
+    (c.desglose_metodo?.["Efectivo USD"]?.total ?? 0) +
+    (c.desglose_metodo?.["Efectivo"]?.total ?? 0);
+  const esperadoBs =
+    (c.desglose_metodo?.["Efectivo Bs"]?.total ?? 0) * tasa;
+  try {
+    await generateCierrePdf({
+      businessName,
+      fecha: c.fecha,
+      cerradoPor: c.cerrado_por,
+      ventasBrutas: Number(c.ventas_brutas_usd),
+      ventasNetas: Number(c.ventas_netas_usd),
+      devoluciones: Number(c.devoluciones_usd),
+      propinas: Number(c.propinas_usd),
+      envios: Number(c.envios_usd),
+      pedidos: c.pedidos_count,
+      completados: c.completados_count,
+      devueltos: c.devueltos_count,
+      cancelados: c.cancelados_count,
+      desgloseMetodo: c.desglose_metodo ?? {},
+      efectivoUsdContado:
+        c.efectivo_usd_contado != null ? Number(c.efectivo_usd_contado) : null,
+      efectivoBsContado:
+        c.efectivo_bs_contado != null ? Number(c.efectivo_bs_contado) : null,
+      tasaBs: tasa,
+      diferenciaUsd:
+        c.diferencia_usd != null ? Number(c.diferencia_usd) : null,
+      esperadoEfectivoUsd: esperadoUsd,
+      esperadoEfectivoBs: esperadoBs,
+      notas: c.notas,
+    });
+  } catch (err) {
+    console.error("PDF cierre pasado", err);
+    alert("No se pudo generar el PDF.");
+  }
 }
 
 function KpiBig({

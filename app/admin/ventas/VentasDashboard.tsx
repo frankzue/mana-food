@@ -1,13 +1,13 @@
-"use client";
+﻿"use client";
 
 import { useMemo, useState } from "react";
 import type { Pedido, PedidoItem, EstadoPedido } from "@/types/database";
 import { formatBs, formatUSD } from "@/lib/utils";
+import { generateVentasPdf } from "@/lib/utils/pdf";
 import {
   DollarSign,
   Receipt,
   TrendingUp,
-  Printer,
   Download,
   CalendarDays,
   CheckCircle2,
@@ -19,6 +19,7 @@ import {
   Wallet,
   Heart,
   FileDown,
+  Loader2,
 } from "lucide-react";
 
 export type ProductoCostEntry = {
@@ -144,8 +145,8 @@ export function VentasDashboard({
     });
   }, [pedidos, from, to, incluirCancelados]);
 
-  // KPIs — tratamos 'devuelto' como pedido completado cuya venta neta se
-  // reduce por el monto devuelto. Si no hay monto explícito, se asume total.
+  // KPIs â€” tratamos 'devuelto' como pedido completado cuya venta neta se
+  // reduce por el monto devuelto. Si no hay monto explÃ­cito, se asume total.
   const kpis = useMemo(() => {
     let ventas = 0;
     let envios = 0;
@@ -191,7 +192,7 @@ export function VentasDashboard({
     };
   }, [filtrados]);
 
-  // Desglose por método de pago
+  // Desglose por mÃ©todo de pago
   const porMetodo = useMemo(() => {
     const map = new Map<string, { total: number; count: number }>();
     for (const p of filtrados) {
@@ -226,8 +227,8 @@ export function VentasDashboard({
     for (const p of filtrados) {
       const items = itemsByPedido[p.id] ?? [];
       for (const it of items) {
-        // Usamos solo el nombre "base" antes de " · " (modificadores)
-        const base = it.producto_nombre.split(" · ")[0] ?? it.producto_nombre;
+        // Usamos solo el nombre "base" antes de " Â· " (modificadores)
+        const base = it.producto_nombre.split(" Â· ")[0] ?? it.producto_nombre;
         const cost = productosCosto?.[base];
         const curr = map.get(base) ?? {
           nombre: base,
@@ -270,11 +271,11 @@ export function VentasDashboard({
           ? Number(p.devuelto_monto_usd)
           : Number(p.total_usd)
         : 0;
-      const netoPedido = Number(p.subtotal_usd) - refundUsd * 0; // no descontamos refund del subtotal para cálculo de margen
+      const netoPedido = Number(p.subtotal_usd) - refundUsd * 0; // no descontamos refund del subtotal para cÃ¡lculo de margen
       totalVentas += Number(p.subtotal_usd);
       const items = itemsByPedido[p.id] ?? [];
       for (const it of items) {
-        const base = it.producto_nombre.split(" · ")[0] ?? it.producto_nombre;
+        const base = it.producto_nombre.split(" Â· ")[0] ?? it.producto_nombre;
         const cost = productosCosto?.[base];
         if (cost && cost.costo_usd > 0) {
           totalCosto += cost.costo_usd * it.cantidad;
@@ -292,7 +293,7 @@ export function VentasDashboard({
     };
   }, [filtrados, itemsByPedido, productosCosto]);
 
-  // Ventas por día (para el rango)
+  // Ventas por dÃ­a (para el rango)
   const porDia = useMemo(() => {
     const map = new Map<string, number>();
     for (const p of filtrados) {
@@ -312,56 +313,75 @@ export function VentasDashboard({
 
   const rangoTexto = useMemo(() => {
     if (range === "todo") {
-      if (filtrados.length === 0) return "Todo el histórico";
+      if (filtrados.length === 0) return "Todo el histÃ³rico";
       const oldest = filtrados.reduce((a, b) =>
         new Date(a.created_at) < new Date(b.created_at) ? a : b
       );
       const newest = filtrados[0];
-      return `${formatDateShort(oldest.created_at)} – ${formatDateShort(
+      return `${formatDateShort(oldest.created_at)} â€“ ${formatDateShort(
         newest.created_at
       )}`;
     }
-    return `${formatDateShort(from.toISOString())} – ${formatDateShort(
+    return `${formatDateShort(from.toISOString())} â€“ ${formatDateShort(
       to.toISOString()
     )}`;
   }, [range, filtrados, from, to]);
 
-  function handlePrint() {
-    if (typeof window !== "undefined") window.print();
-  }
+  const [pdfLoading, setPdfLoading] = useState(false);
 
   /**
-   * Genera el reporte en una ventana nueva, autocontenida, con logo y
-   * disparo automático de imprimir (donde el usuario puede elegir "Guardar
-   * como PDF"). Es más robusto que window.print() de la página entera porque:
-   *   - No depende de que las reglas print: de Tailwind se apliquen en todos los navegadores.
-   *   - El layout es limpio y siempre cabe en A4/Letter.
-   *   - Funciona aunque estilos dinámicos / animaciones rompan el print del SPA.
+   * Descarga REAL del PDF usando jsPDF (no depende del diÃ¡logo de impresiÃ³n).
+   * El archivo se descarga con nombre "ventas-<rango>.pdf".
    */
-  function handleDownloadPdf() {
-    if (typeof window === "undefined" || filtrados.length === 0) return;
-    const html = buildReportHtml({
-      businessName,
-      rangoTexto,
-      kpis,
-      filtrados,
-      itemsByPedido,
-      topProductos,
-      gananciaBruta,
-    });
-
-    const win = window.open("", "_blank", "noopener,noreferrer,width=1024,height=768");
-    if (!win) {
-      // Si el popup está bloqueado, caemos al print normal.
+  async function handleDownloadPdf() {
+    if (filtrados.length === 0) return;
+    setPdfLoading(true);
+    try {
+      await generateVentasPdf({
+        businessName,
+        rangoTexto,
+        kpis,
+        topProductos,
+        gananciaBruta,
+        pedidos: filtrados.map((p) => {
+          const items = itemsByPedido[p.id] ?? [];
+          const productos = items
+            .map((i) => `${i.cantidad}Ã— ${i.producto_nombre}`)
+            .join("\n");
+          const isRefunded = p.estado === "devuelto";
+          const refundUsd = isRefunded
+            ? p.devuelto_monto_usd != null
+              ? Number(p.devuelto_monto_usd)
+              : Number(p.total_usd)
+            : null;
+          return {
+            numero: p.numero,
+            fecha: new Date(p.created_at).toLocaleString("es-VE", {
+              day: "2-digit",
+              month: "2-digit",
+              year: "2-digit",
+              hour: "2-digit",
+              minute: "2-digit",
+            }),
+            cliente: p.cliente_nombre,
+            telefono: p.cliente_telefono,
+            productos,
+            metodoPago: p.metodo_pago,
+            estado: p.estado,
+            totalUsd: Number(p.total_usd),
+            totalBs: Number(p.total_bs),
+            refundUsd,
+          };
+        }),
+      });
+    } catch (err) {
+      console.error("PDF ventas", err);
       alert(
-        "Permite ventanas emergentes para descargar el PDF, o usa el botón Imprimir."
+        "No se pudo generar el PDF. Intenta de nuevo o recarga la pÃ¡gina."
       );
-      window.print();
-      return;
+    } finally {
+      setPdfLoading(false);
     }
-    win.document.open();
-    win.document.write(html);
-    win.document.close();
   }
 
   function handleExportCsv() {
@@ -440,10 +460,10 @@ export function VentasDashboard({
         />
         <div className="flex-1">
           <h1 className="font-display text-2xl font-black">
-            {businessName} — Reporte de ventas
+            {businessName} â€” Reporte de ventas
           </h1>
           <p className="text-sm">
-            {rangoTexto} · Generado el {new Date().toLocaleString("es-VE")}
+            {rangoTexto} Â· Generado el {new Date().toLocaleString("es-VE")}
           </p>
         </div>
       </div>
@@ -513,25 +533,26 @@ export function VentasDashboard({
             <button
               onClick={handleExportCsv}
               disabled={filtrados.length === 0}
-              className="inline-flex items-center gap-1.5 rounded-full bg-white ring-1 ring-black/10 px-3 py-1.5 text-xs font-semibold text-mana-ink hover:ring-mana-red/40 transition disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 rounded-full bg-white ring-1 ring-black/10 px-3.5 py-2 text-xs font-bold text-mana-ink hover:ring-mana-red/40 transition disabled:opacity-50"
+              title="Descargar los pedidos en formato CSV para Excel"
             >
-              <Download className="h-3.5 w-3.5" /> Exportar CSV
+              <Download className="h-3.5 w-3.5" /> CSV
             </button>
             <button
               onClick={handleDownloadPdf}
-              disabled={filtrados.length === 0}
-              className="inline-flex items-center gap-1.5 rounded-full bg-mana-red text-white px-3 py-1.5 text-xs font-semibold ring-1 ring-mana-red hover:brightness-95 transition disabled:opacity-50"
-              title="Abre una ventana con el reporte listo para guardar como PDF"
+              disabled={filtrados.length === 0 || pdfLoading}
+              className="inline-flex items-center gap-1.5 rounded-full bg-mana-red text-white px-4 py-2 text-xs font-bold ring-1 ring-mana-red hover:brightness-95 transition disabled:opacity-50 shadow-mana-soft"
+              title="Descarga un PDF con el reporte completo"
             >
-              <FileDown className="h-3.5 w-3.5" /> Descargar PDF
-            </button>
-            <button
-              onClick={handlePrint}
-              disabled={filtrados.length === 0}
-              className="inline-flex items-center gap-1.5 rounded-full bg-mana-yellow text-mana-ink px-3 py-1.5 text-xs font-semibold ring-1 ring-mana-yellow hover:brightness-95 transition disabled:opacity-50"
-              title="Imprime esta página tal cual"
-            >
-              <Printer className="h-3.5 w-3.5" /> Imprimir
+              {pdfLoading ? (
+                <>
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" /> Generando...
+                </>
+              ) : (
+                <>
+                  <FileDown className="h-3.5 w-3.5" /> Descargar PDF
+                </>
+              )}
             </button>
           </div>
         </div>
@@ -545,10 +566,10 @@ export function VentasDashboard({
           value={formatUSD(kpis.ventasNetas)}
           sub={
             kpis.devolucionesUsd > 0
-              ? `Brutas ${formatUSD(kpis.ventas)} − devoluciones ${formatUSD(
+              ? `Brutas ${formatUSD(kpis.ventas)} âˆ’ devoluciones ${formatUSD(
                   kpis.devolucionesUsd
                 )}`
-              : `≈ ${formatBs(kpis.totalBs)}`
+              : `â‰ˆ ${formatBs(kpis.totalBs)}`
           }
           tone="red"
         />
@@ -556,9 +577,9 @@ export function VentasDashboard({
           icon={<Receipt className="h-5 w-5" />}
           label="Pedidos"
           value={String(kpis.pedidos)}
-          sub={`${kpis.completados} completados · ${kpis.enCurso} en curso${
-            kpis.devueltos ? ` · ${kpis.devueltos} devueltos` : ""
-          }${incluirCancelados ? ` · ${kpis.cancelados} cancelados` : ""}`}
+          sub={`${kpis.completados} completados Â· ${kpis.enCurso} en curso${
+            kpis.devueltos ? ` Â· ${kpis.devueltos} devueltos` : ""
+          }${incluirCancelados ? ` Â· ${kpis.cancelados} cancelados` : ""}`}
           tone="ink"
         />
         <Kpi
@@ -578,7 +599,7 @@ export function VentasDashboard({
                 ? `${((kpis.propinas / Math.max(1, kpis.ventas)) * 100).toFixed(
                     1
                   )}% de ventas`
-                : "Aún sin propinas"
+                : "AÃºn sin propinas"
             }
             tone="ink"
           />
@@ -589,7 +610,7 @@ export function VentasDashboard({
             value={formatUSD(kpis.devolucionesUsd)}
             sub={`${kpis.devueltos} pedidos${
               kpis.ventas > 0
-                ? ` · ${((kpis.devolucionesUsd / kpis.ventas) * 100).toFixed(
+                ? ` Â· ${((kpis.devolucionesUsd / kpis.ventas) * 100).toFixed(
                     1
                   )}% de ventas`
                 : ""
@@ -604,7 +625,7 @@ export function VentasDashboard({
           {kpis.envios > 0 && (
             <>
               De las ventas netas, {formatUSD(kpis.envios)} corresponden a
-              envíos cobrados.
+              envÃ­os cobrados.
             </>
           )}
           {kpis.propinas > 0 && (
@@ -632,11 +653,11 @@ export function VentasDashboard({
         </div>
       ) : (
         <>
-          {/* Gráfico simple por día */}
+          {/* GrÃ¡fico simple por dÃ­a */}
           {porDia.length > 1 && (
             <section className="card-mana p-4 sm:p-5">
               <h3 className="font-display font-bold text-mana-ink">
-                Ventas por día
+                Ventas por dÃ­a
               </h3>
               <div className="mt-3 flex items-end gap-1 h-32">
                 {porDia.map((d) => {
@@ -662,11 +683,11 @@ export function VentasDashboard({
             </section>
           )}
 
-          {/* Desglose por método de pago + Top productos */}
+          {/* Desglose por mÃ©todo de pago + Top productos */}
           <section className="grid gap-5 lg:grid-cols-2">
             <div className="card-mana p-4 sm:p-5">
               <h3 className="font-display font-bold text-mana-ink">
-                Desglose por método de pago
+                Desglose por mÃ©todo de pago
               </h3>
               <ul className="mt-3 space-y-2.5">
                 {porMetodo.map((m) => (
@@ -687,7 +708,7 @@ export function VentasDashboard({
                         />
                       </div>
                       <span className="text-[11px] text-mana-muted w-20 text-right">
-                        {m.count} pedidos · {m.pct.toFixed(0)}%
+                        {m.count} pedidos Â· {m.pct.toFixed(0)}%
                       </span>
                     </div>
                   </li>
@@ -698,7 +719,7 @@ export function VentasDashboard({
             <div className="card-mana p-4 sm:p-5">
               <h3 className="font-display font-bold text-mana-ink flex items-center gap-1.5">
                 <Star className="h-4 w-4 text-mana-yellow" />
-                Productos más vendidos
+                Productos mÃ¡s vendidos
               </h3>
               <ul className="mt-3 space-y-1.5">
                 {topProductos.map((p, idx) => (
@@ -710,7 +731,7 @@ export function VentasDashboard({
                       <strong className="text-mana-red">#{idx + 1}</strong>{" "}
                       {p.nombre}{" "}
                       <span className="text-mana-muted">
-                        × {p.cantidad}
+                        Ã— {p.cantidad}
                       </span>
                     </span>
                     <div className="text-right shrink-0">
@@ -743,22 +764,22 @@ export function VentasDashboard({
                 (p) => p.costo_usd === 0
               ) ? (
                 <p className="mt-3 text-[11px] text-mana-muted italic">
-                  💡 Agrega costos por producto en la BD (columna{" "}
+                  ðŸ’¡ Agrega costos por producto en la BD (columna{" "}
                   <code className="font-mono">productos.costo_usd</code>) para
                   ver el margen real.
                 </p>
               ) : gananciaBruta ? (
                 <div className="mt-3 rounded-xl bg-mana-success/10 ring-1 ring-mana-success/20 p-3 text-xs">
                   <div className="flex justify-between">
-                    <span className="text-mana-muted">Ventas de menú</span>
+                    <span className="text-mana-muted">Ventas de menÃº</span>
                     <span className="font-semibold">
                       {formatUSD(gananciaBruta.ventas)}
                     </span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-mana-muted">Costo mercancía</span>
+                    <span className="text-mana-muted">Costo mercancÃ­a</span>
                     <span className="font-semibold">
-                      − {formatUSD(gananciaBruta.costo)}
+                      âˆ’ {formatUSD(gananciaBruta.costo)}
                     </span>
                   </div>
                   <div className="flex justify-between pt-1 mt-1 border-t border-mana-success/20">
@@ -820,7 +841,7 @@ export function VentasDashboard({
                     <th className="text-left px-3 py-2 hidden sm:table-cell">
                       Zona
                     </th>
-                    <th className="text-left px-3 py-2">Método</th>
+                    <th className="text-left px-3 py-2">MÃ©todo</th>
                     <th className="text-left px-3 py-2">Estado</th>
                     <th className="text-right px-3 py-2">Total</th>
                   </tr>
@@ -893,7 +914,7 @@ export function VentasDashboard({
                         {p.estado === "devuelto" &&
                           p.devuelto_monto_usd != null && (
                             <div className="text-[10px] text-orange-700 font-semibold">
-                              − {formatUSD(Number(p.devuelto_monto_usd))}
+                              âˆ’ {formatUSD(Number(p.devuelto_monto_usd))}
                             </div>
                           )}
                       </td>
@@ -920,11 +941,11 @@ export function VentasDashboard({
                         colSpan={6}
                         className="px-3 py-2 text-right text-xs font-semibold text-orange-700"
                       >
-                        − Devoluciones
+                        âˆ’ Devoluciones
                       </td>
                       <td className="px-3 py-2 text-right">
                         <div className="font-bold text-orange-700">
-                          − {formatUSD(kpis.devolucionesUsd)}
+                          âˆ’ {formatUSD(kpis.devolucionesUsd)}
                         </div>
                       </td>
                     </tr>
@@ -1024,435 +1045,3 @@ function StatusCard({
   );
 }
 
-// =========================================================
-// PDF report builder (ventana nueva autocontenida)
-// =========================================================
-function esc(s: string): string {
-  return String(s ?? "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-}
-
-function fmtUsd(n: number): string {
-  return `$${n.toFixed(2)}`;
-}
-
-type BuildReportParams = {
-  businessName: string;
-  rangoTexto: string;
-  kpis: {
-    ventas: number;
-    ventasNetas: number;
-    envios: number;
-    propinas: number;
-    totalBs: number;
-    pedidos: number;
-    completados: number;
-    cancelados: number;
-    devueltos: number;
-    devolucionesUsd: number;
-    enCurso: number;
-    ticketPromedio: number;
-  };
-  filtrados: Pedido[];
-  itemsByPedido: Record<string, PedidoItem[]>;
-  topProductos: Array<{
-    nombre: string;
-    cantidad: number;
-    total: number;
-    margenPct: number | null;
-  }>;
-  gananciaBruta: {
-    ventas: number;
-    costo: number;
-    ganancia: number;
-    margenPct: number;
-  } | null;
-};
-
-function buildReportHtml({
-  businessName,
-  rangoTexto,
-  kpis,
-  filtrados,
-  itemsByPedido,
-  topProductos,
-  gananciaBruta,
-}: BuildReportParams): string {
-  const rowsHtml = filtrados
-    .map((p) => {
-      const items = itemsByPedido[p.id] ?? [];
-      const prods = items
-        .map((i) => `${i.cantidad}× ${esc(i.producto_nombre)}`)
-        .join("<br/>");
-      const isRefunded = p.estado === "devuelto";
-      const refundAmount = isRefunded
-        ? p.devuelto_monto_usd != null
-          ? Number(p.devuelto_monto_usd)
-          : Number(p.total_usd)
-        : 0;
-      const totalCell = isRefunded
-        ? `<span class="line-through text-muted">${fmtUsd(
-            Number(p.total_usd)
-          )}</span><br/><span class="refund">− ${fmtUsd(
-            refundAmount
-          )}</span>`
-        : fmtUsd(Number(p.total_usd));
-      return `
-        <tr>
-          <td>#${String(p.numero).padStart(4, "0")}</td>
-          <td>${new Date(p.created_at).toLocaleString("es-VE", {
-            day: "2-digit",
-            month: "2-digit",
-            year: "2-digit",
-            hour: "2-digit",
-            minute: "2-digit",
-          })}</td>
-          <td>
-            <div class="strong">${esc(p.cliente_nombre)}</div>
-            <div class="muted small">${esc(p.cliente_telefono)}</div>
-          </td>
-          <td class="small">${prods || "—"}</td>
-          <td>${esc(p.metodo_pago)}</td>
-          <td><span class="badge badge-${p.estado}">${p.estado}</span>${
-        isRefunded && p.motivo_devolucion
-          ? `<div class="muted small">${esc(p.motivo_devolucion)}</div>`
-          : ""
-      }</td>
-          <td class="right strong">${totalCell}</td>
-        </tr>
-      `;
-    })
-    .join("");
-
-  const topHtml = topProductos
-    .map(
-      (p, idx) => `
-      <li>
-        <span class="rank">#${idx + 1}</span>
-        <span class="prod-name">${esc(p.nombre)} <small>× ${p.cantidad}</small></span>
-        <span class="prod-total">
-          ${fmtUsd(p.total)}
-          ${
-            p.margenPct !== null
-              ? `<small class="margin ${
-                  p.margenPct >= 40
-                    ? "m-good"
-                    : p.margenPct >= 20
-                    ? "m-ok"
-                    : "m-bad"
-                }">Margen ${p.margenPct.toFixed(0)}%</small>`
-              : ""
-          }
-        </span>
-      </li>
-    `
-    )
-    .join("");
-
-  const margenHtml = gananciaBruta
-    ? `
-    <div class="margen-box">
-      <div class="row"><span>Ventas de menú</span><span>${fmtUsd(
-        gananciaBruta.ventas
-      )}</span></div>
-      <div class="row"><span>Costo mercancía</span><span>− ${fmtUsd(
-        gananciaBruta.costo
-      )}</span></div>
-      <div class="row total"><span>Ganancia bruta</span><span>${fmtUsd(
-        gananciaBruta.ganancia
-      )} (${gananciaBruta.margenPct.toFixed(0)}%)</span></div>
-    </div>
-  `
-    : "";
-
-  return `<!doctype html>
-<html lang="es">
-<head>
-  <meta charset="utf-8" />
-  <title>${esc(businessName)} — Reporte de ventas</title>
-  <style>
-    * { box-sizing: border-box; }
-    html, body {
-      margin: 0;
-      padding: 0;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
-      color: #1a1a1a;
-      background: #fff;
-      -webkit-print-color-adjust: exact;
-      print-color-adjust: exact;
-    }
-    body { padding: 24px; }
-    @page { margin: 14mm; size: A4; }
-    header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 16px;
-      border-bottom: 2px solid #e11d48;
-      padding-bottom: 14px;
-      margin-bottom: 20px;
-    }
-    header .brand { display: flex; align-items: center; gap: 12px; }
-    header img.logo { height: 56px; width: 56px; object-fit: contain; }
-    header h1 { margin: 0; font-size: 22px; font-weight: 900; color: #1a1a1a; }
-    header .meta { font-size: 12px; color: #666; text-align: right; }
-    h2 {
-      font-size: 14px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-      color: #666;
-      margin: 18px 0 8px;
-      border-bottom: 1px solid #eee;
-      padding-bottom: 4px;
-    }
-    .kpis {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 10px;
-      margin-bottom: 18px;
-    }
-    .kpi {
-      border: 1px solid #e5e5e5;
-      border-radius: 10px;
-      padding: 10px 12px;
-    }
-    .kpi .label { font-size: 10px; text-transform: uppercase; color: #888; font-weight: 700; letter-spacing: 0.04em; }
-    .kpi .value { font-size: 20px; font-weight: 900; color: #111; margin-top: 2px; }
-    .kpi .sub { font-size: 10px; color: #888; margin-top: 2px; }
-    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
-    .box { border: 1px solid #e5e5e5; border-radius: 10px; padding: 12px; }
-    ul.top { list-style: none; margin: 0; padding: 0; }
-    ul.top li {
-      display: grid;
-      grid-template-columns: 24px 1fr auto;
-      align-items: center;
-      gap: 8px;
-      padding: 4px 0;
-      border-bottom: 1px dashed #eee;
-      font-size: 11px;
-    }
-    ul.top li:last-child { border-bottom: 0; }
-    ul.top .rank { color: #e11d48; font-weight: 700; }
-    ul.top .prod-name small { color: #888; }
-    ul.top .prod-total { text-align: right; font-weight: 700; }
-    ul.top .margin { display: block; font-size: 9px; font-weight: 700; }
-    .m-good { color: #16a34a; }
-    .m-ok { color: #ca8a04; }
-    .m-bad { color: #ea580c; }
-    .margen-box { margin-top: 10px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 10px; font-size: 11px; }
-    .margen-box .row { display: flex; justify-content: space-between; margin-bottom: 2px; }
-    .margen-box .row.total { border-top: 1px solid #bbf7d0; padding-top: 4px; margin-top: 4px; font-weight: 800; color: #15803d; }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 10.5px;
-      margin-top: 6px;
-    }
-    thead th {
-      background: #111;
-      color: #fff;
-      text-align: left;
-      padding: 6px 8px;
-      font-size: 10px;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-    }
-    tbody td {
-      padding: 6px 8px;
-      border-bottom: 1px solid #eee;
-      vertical-align: top;
-    }
-    tbody tr:nth-child(even) td { background: #fafafa; }
-    .right { text-align: right; }
-    .strong { font-weight: 700; }
-    .muted { color: #888; }
-    .small { font-size: 10px; }
-    .line-through { text-decoration: line-through; }
-    .refund { color: #ea580c; font-weight: 700; }
-    .badge {
-      display: inline-block;
-      padding: 2px 8px;
-      border-radius: 999px;
-      font-size: 9px;
-      font-weight: 700;
-      text-transform: uppercase;
-    }
-    .badge-nuevo { background: #fef3c7; color: #78350f; }
-    .badge-contactado { background: #fef9c3; color: #713f12; }
-    .badge-pagado { background: #dbeafe; color: #1e40af; }
-    .badge-completado { background: #dcfce7; color: #166534; }
-    .badge-cancelado { background: #fee2e2; color: #991b1b; }
-    .badge-devuelto { background: #ffedd5; color: #9a3412; }
-    tfoot td {
-      background: #f5f5f5;
-      font-weight: 700;
-      padding: 6px 8px;
-      border-top: 2px solid #111;
-    }
-    footer {
-      margin-top: 20px;
-      padding-top: 10px;
-      border-top: 1px solid #eee;
-      font-size: 10px;
-      color: #888;
-      text-align: center;
-    }
-    .toolbar {
-      position: fixed;
-      top: 12px;
-      right: 12px;
-      display: flex;
-      gap: 8px;
-      z-index: 1000;
-    }
-    .toolbar button {
-      background: #e11d48;
-      color: #fff;
-      border: 0;
-      border-radius: 999px;
-      padding: 10px 16px;
-      font-weight: 700;
-      font-size: 13px;
-      cursor: pointer;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    }
-    .toolbar button.secondary {
-      background: #fff;
-      color: #1a1a1a;
-      border: 1px solid #ccc;
-    }
-    @media print {
-      .toolbar { display: none !important; }
-      body { padding: 0; }
-    }
-  </style>
-</head>
-<body>
-  <div class="toolbar">
-    <button class="secondary" onclick="window.close()">Cerrar</button>
-    <button onclick="window.print()">Imprimir / Guardar PDF</button>
-  </div>
-
-  <header>
-    <div class="brand">
-      <img src="/logo.png" alt="${esc(businessName)}" class="logo"
-           onerror="this.style.display='none'" />
-      <div>
-        <h1>${esc(businessName)}</h1>
-        <div class="muted small">Reporte de ventas</div>
-      </div>
-    </div>
-    <div class="meta">
-      <div class="strong">${esc(rangoTexto)}</div>
-      <div>Generado: ${new Date().toLocaleString("es-VE")}</div>
-    </div>
-  </header>
-
-  <h2>Resumen</h2>
-  <div class="kpis">
-    <div class="kpi">
-      <div class="label">Ventas netas</div>
-      <div class="value">${fmtUsd(kpis.ventasNetas)}</div>
-      <div class="sub">Brutas ${fmtUsd(kpis.ventas)}${
-    kpis.devolucionesUsd > 0
-      ? ` − devoluciones ${fmtUsd(kpis.devolucionesUsd)}`
-      : ""
-  }</div>
-    </div>
-    <div class="kpi">
-      <div class="label">Pedidos</div>
-      <div class="value">${kpis.pedidos}</div>
-      <div class="sub">${kpis.completados} completados · ${kpis.cancelados} cancelados${
-    kpis.devueltos ? ` · ${kpis.devueltos} devueltos` : ""
-  }</div>
-    </div>
-    <div class="kpi">
-      <div class="label">Ticket promedio</div>
-      <div class="value">${fmtUsd(kpis.ticketPromedio)}</div>
-      <div class="sub">Por pedido</div>
-    </div>
-    <div class="kpi">
-      <div class="label">Propinas</div>
-      <div class="value">${fmtUsd(kpis.propinas)}</div>
-      <div class="sub">Total recibido</div>
-    </div>
-  </div>
-
-  <div class="two-col">
-    <div class="box">
-      <h2 style="margin-top:0; border:0; padding:0;">Productos más vendidos</h2>
-      <ul class="top">${topHtml || '<li><span class="muted">Sin datos</span></li>'}</ul>
-      ${margenHtml}
-    </div>
-    <div class="box">
-      <h2 style="margin-top:0; border:0; padding:0;">Desglose por estado</h2>
-      <ul class="top">
-        <li><span class="rank">✓</span><span class="prod-name">Completados</span><span class="prod-total">${
-          kpis.completados
-        }</span></li>
-        <li><span class="rank">⏳</span><span class="prod-name">En curso</span><span class="prod-total">${
-          kpis.enCurso
-        }</span></li>
-        <li><span class="rank">↩</span><span class="prod-name">Devueltos</span><span class="prod-total">${
-          kpis.devueltos
-        } · ${fmtUsd(kpis.devolucionesUsd)}</span></li>
-        <li><span class="rank">✗</span><span class="prod-name">Cancelados</span><span class="prod-total">${
-          kpis.cancelados
-        }</span></li>
-      </ul>
-    </div>
-  </div>
-
-  <h2>Pedidos (${filtrados.length})</h2>
-  <table>
-    <thead>
-      <tr>
-        <th>#</th>
-        <th>Fecha</th>
-        <th>Cliente</th>
-        <th>Productos</th>
-        <th>Pago</th>
-        <th>Estado</th>
-        <th class="right">Total</th>
-      </tr>
-    </thead>
-    <tbody>
-      ${rowsHtml || '<tr><td colspan="7" class="muted">Sin pedidos en el rango</td></tr>'}
-    </tbody>
-    <tfoot>
-      <tr>
-        <td colspan="6" class="right">Ventas brutas</td>
-        <td class="right">${fmtUsd(kpis.ventas)}</td>
-      </tr>
-      ${
-        kpis.devolucionesUsd > 0
-          ? `<tr><td colspan="6" class="right refund">− Devoluciones</td><td class="right refund">− ${fmtUsd(
-              kpis.devolucionesUsd
-            )}</td></tr>`
-          : ""
-      }
-      <tr>
-        <td colspan="6" class="right">Ventas netas</td>
-        <td class="right">${fmtUsd(kpis.ventasNetas)}</td>
-      </tr>
-    </tfoot>
-  </table>
-
-  <footer>
-    ${esc(businessName)} · Reporte generado desde el panel de administración
-  </footer>
-
-  <script>
-    // Auto-print al cargar (un pequeño delay para que la imagen del logo cargue).
-    window.addEventListener('load', function() {
-      setTimeout(function() { window.print(); }, 350);
-    });
-  </script>
-</body>
-</html>`;
-}

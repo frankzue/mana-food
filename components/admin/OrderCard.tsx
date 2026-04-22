@@ -251,79 +251,89 @@ export function OrderCard({ pedido, businessName, payment }: Props) {
         </div>
       )}
 
-      <div className="flex flex-wrap gap-2 pt-1">
-        <button
-          onClick={handleContactar}
-          className="flex-1 min-w-[140px] inline-flex items-center justify-center gap-1.5 rounded-full bg-[#25D366] px-4 py-2.5 font-semibold text-white shadow-mana-soft transition hover:brightness-95 active:scale-95"
-        >
-          <MessageCircle className="h-4 w-4" /> Contactar Cliente
-        </button>
-
-        {(pedido.estado === "contactado" || pedido.estado === "nuevo") && (
+      {/* Acciones: fila 1 acción principal (contactar), fila 2 transiciones de estado */}
+      <div className="pt-1 space-y-2">
+        <div className="flex gap-2">
           <button
-            onClick={() => updateEstado("pagado")}
-            disabled={isPending}
-            className="inline-flex items-center gap-1.5 rounded-full bg-blue-500 px-3 py-2.5 text-sm font-semibold text-white shadow-mana-soft transition hover:brightness-95 active:scale-95 disabled:opacity-50"
-            title="Marcar como pagado"
+            onClick={handleContactar}
+            className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-[#25D366] px-4 py-3 text-sm font-bold text-white shadow-mana-soft transition hover:brightness-95 active:scale-[0.98]"
           >
-            <Wallet className="h-4 w-4" />
-            <span className="hidden sm:inline">Pagado</span>
+            <MessageCircle className="h-4 w-4" />
+            Contactar por WhatsApp
           </button>
-        )}
+          <button
+            onClick={handleCopy}
+            className={[
+              "inline-flex items-center justify-center gap-1.5 rounded-xl px-3 py-3 text-xs font-bold transition ring-1 active:scale-[0.98] min-w-[96px]",
+              copied
+                ? "bg-mana-success text-white ring-mana-success"
+                : "bg-white text-mana-ink ring-black/10 hover:ring-mana-red/40",
+            ].join(" ")}
+            title="Copiar el mensaje completo listo para WhatsApp"
+          >
+            {copied ? (
+              <>
+                <Check className="h-3.5 w-3.5" /> Copiado
+              </>
+            ) : (
+              <>
+                <Copy className="h-3.5 w-3.5" /> Copiar
+              </>
+            )}
+          </button>
+        </div>
 
-        <button
-          onClick={handleCopy}
-          className={[
-            "inline-flex items-center gap-1.5 rounded-full px-3 py-2.5 text-sm font-semibold transition ring-1 active:scale-95",
-            copied
-              ? "bg-mana-success text-white ring-mana-success"
-              : "bg-white text-mana-ink ring-black/10 hover:ring-mana-red/40",
-          ].join(" ")}
-          title="Copiar resumen del pedido (con datos de pago) para pegar en WhatsApp"
-        >
-          {copied ? (
-            <>
-              <Check className="h-4 w-4" /> Copiado
-            </>
-          ) : (
-            <>
-              <Copy className="h-4 w-4" /> Copiar
-            </>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          {(pedido.estado === "contactado" || pedido.estado === "nuevo") && (
+            <button
+              onClick={() => updateEstado("pagado")}
+              disabled={isPending}
+              className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-blue-500 px-3 py-2.5 text-xs font-bold text-white shadow-mana-soft transition hover:brightness-95 active:scale-[0.98] disabled:opacity-50"
+              title="Marcar como pagado"
+            >
+              <Wallet className="h-3.5 w-3.5" />
+              Marcar pagado
+            </button>
           )}
-        </button>
 
-        {pedido.estado !== "completado" && (
-          <button
-            onClick={() => updateEstado("completado")}
-            disabled={isPending}
-            className="inline-flex items-center gap-1.5 rounded-full bg-mana-success px-3 py-2.5 text-sm font-semibold text-white shadow-mana-soft transition hover:brightness-95 active:scale-95 disabled:opacity-50"
-            title="Marcar completado"
-          >
-            <CheckCircle2 className="h-4 w-4" />
-          </button>
-        )}
+          {pedido.estado !== "completado" && pedido.estado !== "devuelto" && pedido.estado !== "cancelado" && (
+            <button
+              onClick={() => updateEstado("completado")}
+              disabled={isPending}
+              className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-mana-success px-3 py-2.5 text-xs font-bold text-white shadow-mana-soft transition hover:brightness-95 active:scale-[0.98] disabled:opacity-50"
+              title="Marcar pedido completado (entregado)"
+            >
+              <CheckCircle2 className="h-3.5 w-3.5" />
+              Completar
+            </button>
+          )}
 
-        {pedido.estado !== "cancelado" && pedido.estado !== "completado" && pedido.estado !== "devuelto" && (
-          <button
-            onClick={() => updateEstado("cancelado")}
-            disabled={isPending}
-            className="inline-flex items-center gap-1.5 rounded-full bg-white text-mana-muted ring-1 ring-black/10 px-3 py-2.5 text-sm font-semibold transition hover:bg-red-50 hover:text-red-600 active:scale-95 disabled:opacity-50"
-            title="Cancelar"
-          >
-            <XCircle className="h-4 w-4" />
-          </button>
-        )}
+          {(pedido.estado === "completado" || pedido.estado === "pagado") && (
+            <button
+              onClick={() => setShowRefund(true)}
+              disabled={isPending}
+              className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-white text-orange-600 ring-1 ring-orange-300 px-3 py-2.5 text-xs font-bold transition hover:bg-orange-50 active:scale-[0.98] disabled:opacity-50"
+              title="Registrar devolución"
+            >
+              <Undo2 className="h-3.5 w-3.5" />
+              Devolver
+            </button>
+          )}
 
-        {(pedido.estado === "completado" || pedido.estado === "pagado") && (
-          <button
-            onClick={() => setShowRefund(true)}
-            disabled={isPending}
-            className="inline-flex items-center gap-1.5 rounded-full bg-white text-orange-600 ring-1 ring-orange-200 px-3 py-2.5 text-sm font-semibold transition hover:bg-orange-50 active:scale-95 disabled:opacity-50"
-            title="Registrar devolución"
-          >
-            <Undo2 className="h-4 w-4" />
-          </button>
-        )}
+          {pedido.estado !== "cancelado" &&
+            pedido.estado !== "completado" &&
+            pedido.estado !== "devuelto" && (
+              <button
+                onClick={() => updateEstado("cancelado")}
+                disabled={isPending}
+                className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-white text-mana-muted ring-1 ring-black/10 px-3 py-2.5 text-xs font-bold transition hover:bg-red-50 hover:text-red-600 hover:ring-red-300 active:scale-[0.98] disabled:opacity-50"
+                title="Cancelar pedido"
+              >
+                <XCircle className="h-3.5 w-3.5" />
+                Cancelar
+              </button>
+            )}
+        </div>
       </div>
 
       {pedido.estado === "devuelto" && (

@@ -61,23 +61,25 @@ export function Header() {
             </div>
           </div>
 
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
+            {/* Línea 1: Nombre + pill de estado (Abierto/Cerrado con horario) */}
             <div className="flex items-center gap-2 min-w-0">
               <h1 className="font-display text-[15px] sm:text-base font-black text-white leading-none tracking-tight truncate">
                 {BUSINESS.name}
               </h1>
-              {/* Status en mini-pill: dot + palabra sobre fondo sutil */}
+
+              {/* Pill de estado MÁS PROMINENTE + horario integrado.
+                  Al leer "ABIERTO · 6 PM - 4 AM" el cliente sabe enseguida
+                  si estamos atendiendo y hasta qué hora. */}
               <span
                 className={[
-                  "inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[9.5px] sm:text-[10px] font-bold uppercase tracking-wider shrink-0 ring-1",
+                  "inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] sm:text-[11px] font-bold uppercase tracking-wider shrink-0 ring-1",
                   isOpen
-                    ? "bg-emerald-500/15 text-emerald-300 ring-emerald-400/30"
+                    ? "bg-emerald-500/20 text-emerald-200 ring-emerald-400/40"
                     : "bg-white/5 text-white/50 ring-white/10",
                 ].join(" ")}
                 aria-live="polite"
-                title={
-                  isOpen ? "Abierto · hasta 4 AM" : "Cerrado · abre 6 PM"
-                }
+                title={isOpen ? "Abierto · 6 PM - 4 AM" : "Cerrado · abre 6 PM"}
               >
                 <span className="relative flex h-1.5 w-1.5">
                   {isOpen && (
@@ -93,15 +95,28 @@ export function Header() {
                 {isOpen ? "Abierto" : "Cerrado"}
               </span>
             </div>
-            <p className="mt-1.5 text-[11px] text-white/65 leading-none truncate">
-              Hecho al{" "}
-              <span className="text-mana-yellow font-semibold">momento</span>
-            </p>
+
+            {/* Línea 2: horario + tagline. El horario queda JUSTO debajo del nombre,
+                fácil de leer y con buen contraste. */}
+            <div className="mt-1 flex items-center gap-2 text-[11px] leading-none">
+              <span className="inline-flex items-center gap-1 text-white/90 font-semibold shrink-0">
+                <Clock
+                  className="h-3 w-3 text-mana-yellow"
+                  strokeWidth={2.4}
+                />
+                6 PM – 4 AM
+              </span>
+              <span className="text-white/25 select-none">•</span>
+              <span className="text-white/65 truncate">
+                Hecho al{" "}
+                <span className="text-mana-yellow font-semibold">momento</span>
+              </span>
+            </div>
           </div>
         </Link>
       </div>
 
-      {/* Fila secundaria: chips funcionales + dirección clickeable */}
+      {/* Fila secundaria: dirección + delivery (el horario ya está arriba) */}
       <div className="border-t border-white/5 bg-black/30">
         <div className="container">
           <div
@@ -117,7 +132,7 @@ export function Header() {
               className="inline-flex items-center gap-1.5 px-2.5 font-semibold text-white/90 hover:text-white transition-colors shrink-0"
             >
               <MapPin className="h-3.5 w-3.5 text-mana-yellow" strokeWidth={2.2} />
-              <span className="truncate max-w-[170px] sm:max-w-none">
+              <span className="truncate max-w-[200px] sm:max-w-none">
                 {BUSINESS.addressShort}
               </span>
               <ChevronRight className="h-3 w-3 text-white/40" />
@@ -127,12 +142,6 @@ export function Header() {
             <span className="inline-flex items-center gap-1.5 px-2.5 font-semibold shrink-0">
               <ScooterIcon className="h-3.5 w-3.5 text-mana-yellow" />
               Delivery y Pickup
-            </span>
-            <span className="text-white/25 select-none px-0.5">•</span>
-
-            <span className="inline-flex items-center gap-1.5 px-2.5 font-semibold shrink-0">
-              <Clock className="h-3.5 w-3.5 text-mana-yellow" strokeWidth={2.2} />
-              6 PM - 4 AM
             </span>
           </div>
         </div>

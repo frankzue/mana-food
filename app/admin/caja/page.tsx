@@ -58,6 +58,7 @@ export default async function AdminCajaPage() {
             pedidos={(pedidos ?? []) as Pedido[]}
             cierres={(cierres ?? []) as CierreCaja[]}
             tasaBs={settings.tasa_bs}
+            businessName={settings.nombre_negocio}
           />
         </div>
       </main>

@@ -1,4 +1,5 @@
-import { MapPin, Clock, Bike, Instagram } from "lucide-react";
+import Link from "next/link";
+import { MapPin, Clock, Bike, Instagram, Lock } from "lucide-react";
 
 type Props = {
   horario: string;
@@ -54,6 +55,23 @@ export function Footer({ horario, direccion, ciudad, nombre }: Props) {
             © {new Date().getFullYear()} {nombre}. Todos los derechos
             reservados.
           </p>
+        </div>
+      </div>
+
+      {/* Barra inferior con el acceso al panel para empleados.
+          Es discreto (texto pequeño, casi sin contraste) para que los
+          clientes no se distraigan, pero identificable por quien lo busca. */}
+      <div className="border-t border-white/5">
+        <div className="container py-2.5 flex items-center justify-between text-[11px] text-white/30">
+          <span>Hecho con 💛 para Maná</span>
+          <Link
+            href="/admin"
+            className="inline-flex items-center gap-1 hover:text-white/80 transition-colors"
+            title="Acceso al panel de empleados"
+          >
+            <Lock className="h-3 w-3" />
+            Acceso empleados
+          </Link>
         </div>
       </div>
     </footer>

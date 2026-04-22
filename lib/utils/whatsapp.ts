@@ -46,8 +46,16 @@ export function getPaymentInstructions(
 }
 
 /**
- * Mensaje completo para WhatsApp. Incluye saludo, detalle del pedido,
- * totales con tasa BCV, datos de pago y cierre profesional con checklist.
+ * Mensaje completo para WhatsApp.
+ *
+ * Diseño (claridad ante todo):
+ *  · Cada monto en su propia línea (USD y Bs nunca "pegados" con ·).
+ *  · "Total a pagar" separado visualmente con USD grande y la conversión
+ *    en Bs debajo entre paréntesis → imposible confundir las cifras.
+ *  · En el bloque de pago repetimos "Monto a pagar" por si el cliente solo
+ *    lee esa sección al momento de transferir.
+ *  · Cierre profesional: lista de verificación ANTES del pago +
+ *    instrucciones claras si necesita cambios.
  */
 export function buildWhatsAppMessage(
   pedido: PedidoConItems,
@@ -59,92 +67,109 @@ export function buildWhatsAppMessage(
   const tasaBs = Number(pedido.tasa_bs);
   const propina = Number(pedido.propina_usd ?? 0);
   const esDelivery = pedido.zona_id != null;
+  const numero = String(pedido.numero).padStart(4, "0");
 
-  const lines: string[] = [];
-  lines.push(`Hola ${pedido.cliente_nombre} 👋`);
-  lines.push("");
-  lines.push(
-    `Te escribimos de *${businessName}*. Recibimos tu pedido *#${String(
-      pedido.numero
-    ).padStart(4, "0")}* con éxito. 🍔`
+  const L: string[] = [];
+
+  // Saludo
+  L.push(`Hola ${pedido.cliente_nombre} 👋`);
+  L.push("");
+  L.push(
+    `Soy del equipo de *${businessName}*. Recibimos tu pedido *#${numero}* correctamente. 🍔`
   );
-  lines.push("");
+  L.push(
+    "Antes de procesarlo, por favor revisa los siguientes datos para confirmar que todo esté en orden."
+  );
+  L.push("");
 
-  // Detalle
-  lines.push("*🧾 Detalle del pedido:*");
+  // 1) DETALLE
+  L.push("*🧾 Tu pedido:*");
   for (const it of pedido.items) {
-    lines.push(
-      `• ${it.cantidad}× ${it.producto_nombre} — ${formatUSD(
+    L.push(
+      `•  ${it.cantidad}×  ${it.producto_nombre}  —  ${formatUSD(
         Number(it.subtotal_usd)
       )}`
     );
   }
-  lines.push("");
+  L.push("");
 
-  // Entrega (zona y notas) — así el cliente confirma que la dirección está correcta
-  lines.push(
-    `*📍 Entrega:* ${
+  // 2) ENTREGA
+  L.push(
+    `*📍 Entrega:*  ${
       esDelivery
-        ? `Delivery · ${pedido.zona_nombre}`
-        : `Retiro en tienda · ${pedido.zona_nombre}`
+        ? `Delivery → ${pedido.zona_nombre}`
+        : `Retiro en tienda (${pedido.zona_nombre})`
     }`
   );
   if (pedido.notas && pedido.notas.trim()) {
-    lines.push(`_Nota:_ ${pedido.notas.trim()}`);
+    L.push(`*📝 Nota:*  ${pedido.notas.trim()}`);
   }
-  lines.push("");
+  L.push("");
 
-  // Totales
-  lines.push(`Subtotal: ${formatUSD(Number(pedido.subtotal_usd))} _(IVA incluido)_`);
-  lines.push(
-    `Envío (${pedido.zona_nombre}): ${formatUSD(Number(pedido.envio_usd))}`
+  // 3) DESGLOSE DE PAGO
+  L.push("*🧮 Desglose:*");
+  L.push(
+    `   Subtotal  —  ${formatUSD(Number(pedido.subtotal_usd))}  _(IVA incluido)_`
+  );
+  L.push(
+    `   Envío     —  ${formatUSD(Number(pedido.envio_usd))}`
   );
   if (propina > 0) {
-    lines.push(`Propina: ${formatUSD(propina)} 🙌`);
+    L.push(`   Propina   —  ${formatUSD(propina)}  🙌`);
   }
-  lines.push(`*Total a pagar: ${formatUSD(totalUsd)}*`);
-  lines.push(
-    `_Tasa BCV: 1 USD = ${tasaBs.toFixed(2)} Bs · al cambio = ${formatBs(
-      totalBs
-    )}_`
-  );
-  lines.push("");
+  L.push("");
 
-  // Método + datos de pago
-  lines.push(`*💳 Método de pago:* ${pedido.metodo_pago}`);
+  // 4) TOTAL — presentado en dos líneas, muy legible
+  L.push("━━━━━━━━━━━━━━━━━━━━");
+  L.push(`*💵 TOTAL A PAGAR:*   *${formatUSD(totalUsd)}*`);
+  L.push(`_Al cambio BCV:_      *${formatBs(totalBs)}*`);
+  L.push(`_Tasa del día:_        1 USD  =  ${tasaBs.toFixed(2)} Bs`);
+  L.push("━━━━━━━━━━━━━━━━━━━━");
+  L.push("");
+
+  // 5) MÉTODO + DATOS DE PAGO
+  L.push(`*💳 Método de pago:*  ${pedido.metodo_pago}`);
   if (payment) {
     const pagoInfo = getPaymentInstructions(pedido.metodo_pago, payment);
     if (pagoInfo) {
-      lines.push("");
-      lines.push("*Datos para el pago:*");
-      lines.push(pagoInfo);
-      lines.push("");
-      lines.push(
-        `*Monto a pagar:* ${formatUSD(totalUsd)} · ${formatBs(totalBs)}`
-      );
+      L.push("");
+      L.push("*Datos para realizar el pago:*");
+      L.push(pagoInfo);
+      L.push("");
+      // Repetimos el monto en el bloque de pago, con cifras separadas
+      // en líneas distintas para máxima claridad.
+      L.push("*👉 Monto exacto a transferir:*");
+      L.push(`   •  En dólares:    *${formatUSD(totalUsd)}*`);
+      L.push(`   •  En bolívares:  *${formatBs(totalBs)}*`);
     }
   }
 
-  // Cierre: checklist de revisión antes del pago
-  lines.push("");
-  lines.push("━━━━━━━━━━━━━━━━━━━");
-  lines.push("*Antes de pagar, confirma que todo esté correcto:*");
-  lines.push("✅ Productos y cantidades");
-  lines.push(
-    esDelivery ? "✅ Zona de entrega y dirección" : "✅ Hora de retiro"
+  // 6) CIERRE — checklist + instrucciones
+  L.push("");
+  L.push("─────────────────────");
+  L.push("*Por favor confirma que todo esté correcto:*");
+  L.push("");
+  L.push("  ✅  Productos y cantidades");
+  L.push(
+    esDelivery
+      ? "  ✅  Dirección y zona de entrega"
+      : "  ✅  Hora para retirar el pedido"
   );
-  lines.push("✅ Método de pago y total");
-  lines.push("");
-  lines.push(
-    "Si todo está en orden, realiza el pago y envíanos el *comprobante* por este mismo chat para confirmar y despachar tu pedido."
+  L.push("  ✅  Método de pago y monto");
+  L.push("");
+  L.push(
+    "👉 Si *todo* está correcto, realiza el pago y envíanos el *comprobante* por este mismo chat. Con eso confirmamos y despachamos."
   );
-  lines.push("");
-  lines.push(
-    "Si necesitas cambiar algo (producto, dirección, hora), respóndenos *antes* de pagar y lo ajustamos. 🙌"
+  L.push("");
+  L.push(
+    "⚠️ Si necesitas *ajustar algo* (producto, dirección, hora, método), respóndenos *antes* de pagar y lo cambiamos sin problema."
   );
-  lines.push("");
-  lines.push(`¡Gracias por preferirnos, ${firstName(pedido.cliente_nombre)}!`);
-  return lines.join("\n");
+  L.push("");
+  L.push(
+    `¡Gracias por elegirnos, ${firstName(pedido.cliente_nombre)}! 🙌`
+  );
+
+  return L.join("\n");
 }
 
 function firstName(full: string): string {
