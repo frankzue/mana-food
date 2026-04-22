@@ -1,5 +1,6 @@
 import type { PedidoConItems, SettingsMap } from "@/types/database";
 import { formatBs, formatUSD } from "@/lib/utils";
+import { formatPaymentBlock } from "@/lib/payment-data";
 
 export type PaymentDetails = Pick<
   SettingsMap,
@@ -14,6 +15,9 @@ export type PaymentDetails = Pick<
 /**
  * Devuelve el texto con los datos de pago para el método elegido.
  * Si no hay datos configurados, devuelve null (no se añade la sección).
+ *
+ * Auto-detecta JSON estructurado y lo formatea. Si el valor es texto
+ * legacy (antes del rediseño) lo respeta tal cual.
  */
 export function getPaymentInstructions(
   metodoPago: string,
@@ -21,16 +25,22 @@ export function getPaymentInstructions(
 ): string | null {
   const m = metodoPago.toLowerCase();
   if (m.includes("pago móvil") || m.includes("pago movil")) {
-    return details.pago_pagomovil || null;
+    return formatPaymentBlock("pagomovil", details.pago_pagomovil) || null;
   }
-  if (m.includes("zelle")) return details.pago_zelle || null;
-  if (m.includes("binance")) return details.pago_binance || null;
-  if (m.includes("transferencia")) return details.pago_transferencia || null;
+  if (m.includes("zelle")) {
+    return formatPaymentBlock("zelle", details.pago_zelle) || null;
+  }
+  if (m.includes("binance")) {
+    return formatPaymentBlock("binance", details.pago_binance) || null;
+  }
+  if (m.includes("transferencia")) {
+    return formatPaymentBlock("transferencia", details.pago_transferencia) || null;
+  }
   if (m.includes("efectivo") && m.includes("usd")) {
-    return details.pago_efectivo_usd || null;
+    return formatPaymentBlock("efectivo", details.pago_efectivo_usd) || null;
   }
   if (m.includes("efectivo") && m.includes("bs")) {
-    return details.pago_efectivo_bs || null;
+    return formatPaymentBlock("efectivo", details.pago_efectivo_bs) || null;
   }
   return null;
 }

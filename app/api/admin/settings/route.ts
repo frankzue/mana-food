@@ -21,12 +21,13 @@ const settingsSchema = z.object({
       return n >= 0 && n <= 1;
     }, "El IVA debe estar entre 0 y 1 (ej: 0.16 = 16%)"),
   whatsapp_encargado: z.string().trim().min(5).max(30),
-  pago_pagomovil: z.string().trim().max(600).default(""),
-  pago_zelle: z.string().trim().max(600).default(""),
-  pago_binance: z.string().trim().max(600).default(""),
-  pago_transferencia: z.string().trim().max(600).default(""),
-  pago_efectivo_usd: z.string().trim().max(600).default(""),
-  pago_efectivo_bs: z.string().trim().max(600).default(""),
+  // Aceptamos JSON estructurado o texto legacy hasta 2000 chars.
+  pago_pagomovil: z.string().trim().max(2000).default(""),
+  pago_zelle: z.string().trim().max(2000).default(""),
+  pago_binance: z.string().trim().max(2000).default(""),
+  pago_transferencia: z.string().trim().max(2000).default(""),
+  pago_efectivo_usd: z.string().trim().max(2000).default(""),
+  pago_efectivo_bs: z.string().trim().max(2000).default(""),
 });
 
 export async function PUT(request: Request) {

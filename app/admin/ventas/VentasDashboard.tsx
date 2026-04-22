@@ -16,6 +16,7 @@ import {
   Clock,
   Phone,
   Star,
+  Undo2,
 } from "lucide-react";
 
 type Props = {
@@ -107,6 +108,7 @@ const ESTADO_LABEL: Record<EstadoPedido, string> = {
   contactado: "Contactado",
   completado: "Completado",
   cancelado: "Cancelado",
+  devuelto: "Devuelto",
 };
 
 export function VentasDashboard({
@@ -132,13 +134,16 @@ export function VentasDashboard({
     });
   }, [pedidos, from, to, incluirCancelados]);
 
-  // KPIs
+  // KPIs — tratamos 'devuelto' como pedido completado cuya venta neta se
+  // reduce por el monto devuelto. Si no hay monto explícito, se asume total.
   const kpis = useMemo(() => {
     let ventas = 0;
     let envios = 0;
     let totalBs = 0;
     let completados = 0;
     let cancelados = 0;
+    let devueltos = 0;
+    let devolucionesUsd = 0;
     let enCurso = 0;
     for (const p of filtrados) {
       ventas += Number(p.total_usd);
@@ -146,17 +151,28 @@ export function VentasDashboard({
       totalBs += Number(p.total_bs);
       if (p.estado === "completado") completados++;
       else if (p.estado === "cancelado") cancelados++;
-      else enCurso++;
+      else if (p.estado === "devuelto") {
+        devueltos++;
+        const monto =
+          p.devuelto_monto_usd != null
+            ? Number(p.devuelto_monto_usd)
+            : Number(p.total_usd);
+        devolucionesUsd += monto;
+      } else enCurso++;
     }
     const pedidos_ = filtrados.length;
+    const ventasNetas = Math.max(0, ventas - devolucionesUsd);
     const ticketPromedio = pedidos_ > 0 ? ventas / pedidos_ : 0;
     return {
       ventas,
+      ventasNetas,
       envios,
       totalBs,
       pedidos: pedidos_,
       completados,
       cancelados,
+      devueltos,
+      devolucionesUsd,
       enCurso,
       ticketPromedio,
     };
@@ -256,6 +272,9 @@ export function VentasDashboard({
       "total_usd",
       "total_bs",
       "tasa_bs",
+      "devuelto_monto_usd",
+      "motivo_devolucion",
+      "devuelto_at",
       "productos",
       "notas",
     ];
@@ -278,6 +297,9 @@ export function VentasDashboard({
         String(p.total_usd),
         String(p.total_bs),
         String(p.tasa_bs),
+        p.devuelto_monto_usd != null ? String(p.devuelto_monto_usd) : "",
+        (p.motivo_devolucion ?? "").replace(/\s+/g, " ").trim(),
+        p.devuelto_at ?? "",
         prods,
         (p.notas ?? "").replace(/\s+/g, " ").trim(),
       ].map((cell) => {
@@ -397,9 +419,15 @@ export function VentasDashboard({
       <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Kpi
           icon={<DollarSign className="h-5 w-5" />}
-          label="Ventas brutas"
-          value={formatUSD(kpis.ventas)}
-          sub={`≈ ${formatBs(kpis.totalBs)}`}
+          label="Ventas netas"
+          value={formatUSD(kpis.ventasNetas)}
+          sub={
+            kpis.devolucionesUsd > 0
+              ? `Brutas ${formatUSD(kpis.ventas)} − devoluciones ${formatUSD(
+                  kpis.devolucionesUsd
+                )}`
+              : `≈ ${formatBs(kpis.totalBs)}`
+          }
           tone="red"
         />
         <Kpi
@@ -407,25 +435,38 @@ export function VentasDashboard({
           label="Pedidos"
           value={String(kpis.pedidos)}
           sub={`${kpis.completados} completados · ${kpis.enCurso} en curso${
-            incluirCancelados ? ` · ${kpis.cancelados} cancelados` : ""
-          }`}
+            kpis.devueltos ? ` · ${kpis.devueltos} devueltos` : ""
+          }${incluirCancelados ? ` · ${kpis.cancelados} cancelados` : ""}`}
           tone="ink"
         />
         <Kpi
           icon={<TrendingUp className="h-5 w-5" />}
           label="Ticket promedio"
           value={formatUSD(kpis.ticketPromedio)}
-          sub="Por pedido"
+          sub="Por pedido (bruto)"
           tone="yellow"
         />
         <Kpi
-          icon={<Truck className="h-5 w-5" />}
-          label="Envíos cobrados"
-          value={formatUSD(kpis.envios)}
-          sub="Incluido en ventas"
+          icon={<Undo2 className="h-5 w-5" />}
+          label="Devoluciones"
+          value={formatUSD(kpis.devolucionesUsd)}
+          sub={`${kpis.devueltos} pedidos${
+            kpis.ventas > 0
+              ? ` · ${((kpis.devolucionesUsd / kpis.ventas) * 100).toFixed(
+                  1
+                )}% de ventas`
+              : ""
+          }`}
           tone="ink"
         />
       </section>
+
+      {kpis.envios > 0 && (
+        <p className="text-[11px] text-mana-muted -mt-2 print:hidden">
+          De las ventas netas, {formatUSD(kpis.envios)} corresponden a envíos
+          cobrados.
+        </p>
+      )}
 
       {filtrados.length === 0 ? (
         <div className="card-mana py-16 text-center">
@@ -533,7 +574,7 @@ export function VentasDashboard({
           </section>
 
           {/* Por estado */}
-          <section className="grid gap-3 sm:grid-cols-3 print:hidden">
+          <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 print:hidden">
             <StatusCard
               icon={<CheckCircle2 className="h-4 w-4" />}
               label="Completados"
@@ -545,6 +586,12 @@ export function VentasDashboard({
               label="En curso"
               count={kpis.enCurso}
               color="bg-mana-yellow text-mana-ink"
+            />
+            <StatusCard
+              icon={<Undo2 className="h-4 w-4" />}
+              label="Devueltos"
+              count={kpis.devueltos}
+              color="bg-orange-500"
             />
             <StatusCard
               icon={<XCircle className="h-4 w-4" />}
@@ -611,19 +658,40 @@ export function VentasDashboard({
                               ? "bg-mana-success/15 text-mana-success"
                               : p.estado === "cancelado"
                               ? "bg-red-100 text-red-700"
+                              : p.estado === "devuelto"
+                              ? "bg-orange-100 text-orange-700"
                               : "bg-mana-yellow/20 text-mana-ink",
                           ].join(" ")}
                         >
                           {ESTADO_LABEL[p.estado]}
                         </span>
+                        {p.estado === "devuelto" &&
+                          p.motivo_devolucion && (
+                            <div className="text-[10px] text-orange-700/80 mt-0.5 truncate max-w-[140px]">
+                              {p.motivo_devolucion}
+                            </div>
+                          )}
                       </td>
                       <td className="px-3 py-2 text-right">
-                        <div className="font-bold text-mana-ink">
+                        <div
+                          className={[
+                            "font-bold",
+                            p.estado === "devuelto"
+                              ? "text-orange-700 line-through"
+                              : "text-mana-ink",
+                          ].join(" ")}
+                        >
                           {formatUSD(Number(p.total_usd))}
                         </div>
                         <div className="text-[10px] text-mana-muted">
                           {formatBs(Number(p.total_bs))}
                         </div>
+                        {p.estado === "devuelto" &&
+                          p.devuelto_monto_usd != null && (
+                            <div className="text-[10px] text-orange-700 font-semibold">
+                              − {formatUSD(Number(p.devuelto_monto_usd))}
+                            </div>
+                          )}
                       </td>
                     </tr>
                   ))}
@@ -634,11 +702,39 @@ export function VentasDashboard({
                       colSpan={6}
                       className="px-3 py-2 text-right text-xs font-semibold text-mana-muted"
                     >
-                      Total del rango
+                      Ventas brutas
+                    </td>
+                    <td className="px-3 py-2 text-right">
+                      <div className="font-bold text-mana-ink">
+                        {formatUSD(kpis.ventas)}
+                      </div>
+                    </td>
+                  </tr>
+                  {kpis.devolucionesUsd > 0 && (
+                    <tr>
+                      <td
+                        colSpan={6}
+                        className="px-3 py-2 text-right text-xs font-semibold text-orange-700"
+                      >
+                        − Devoluciones
+                      </td>
+                      <td className="px-3 py-2 text-right">
+                        <div className="font-bold text-orange-700">
+                          − {formatUSD(kpis.devolucionesUsd)}
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                  <tr className="border-t-2 border-mana-red/20">
+                    <td
+                      colSpan={6}
+                      className="px-3 py-2 text-right text-xs font-semibold text-mana-muted"
+                    >
+                      Ventas netas del rango
                     </td>
                     <td className="px-3 py-2 text-right">
                       <div className="font-display font-black text-mana-red">
-                        {formatUSD(kpis.ventas)}
+                        {formatUSD(kpis.ventasNetas)}
                       </div>
                     </td>
                   </tr>

@@ -19,6 +19,8 @@ import {
   XCircle,
   Copy,
   Check,
+  Undo2,
+  AlertTriangle,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
@@ -55,6 +57,11 @@ const estadoConfig: Record<
     bg: "bg-mana-muted",
     text: "text-white",
   },
+  devuelto: {
+    label: "Devuelto",
+    bg: "bg-orange-500",
+    text: "text-white",
+  },
 };
 
 function formatTime(iso: string): string {
@@ -68,6 +75,11 @@ function formatTime(iso: string): string {
 export function OrderCard({ pedido, businessName, payment }: Props) {
   const [isPending, startTransition] = useTransition();
   const [copied, setCopied] = useState(false);
+  const [showRefund, setShowRefund] = useState(false);
+  const [refundMonto, setRefundMonto] = useState<string>(
+    String(Number(pedido.total_usd ?? 0).toFixed(2))
+  );
+  const [refundMotivo, setRefundMotivo] = useState<string>("");
   const router = useRouter();
 
   const estado = estadoConfig[pedido.estado];
@@ -79,6 +91,25 @@ export function OrderCard({ pedido, businessName, payment }: Props) {
         .from("pedidos")
         .update({ estado: nuevoEstado })
         .eq("id", pedido.id);
+      router.refresh();
+    });
+  }
+
+  function registrarDevolucion() {
+    const monto = Number(refundMonto);
+    if (!isFinite(monto) || monto <= 0) return;
+    startTransition(async () => {
+      const supabase = createSupabaseBrowserClient();
+      await supabase
+        .from("pedidos")
+        .update({
+          estado: "devuelto",
+          devuelto_at: new Date().toISOString(),
+          devuelto_monto_usd: monto,
+          motivo_devolucion: refundMotivo.trim() || null,
+        })
+        .eq("id", pedido.id);
+      setShowRefund(false);
       router.refresh();
     });
   }
@@ -245,7 +276,7 @@ export function OrderCard({ pedido, businessName, payment }: Props) {
           </button>
         )}
 
-        {pedido.estado !== "cancelado" && pedido.estado !== "completado" && (
+        {pedido.estado !== "cancelado" && pedido.estado !== "completado" && pedido.estado !== "devuelto" && (
           <button
             onClick={() => updateEstado("cancelado")}
             disabled={isPending}
@@ -255,7 +286,114 @@ export function OrderCard({ pedido, businessName, payment }: Props) {
             <XCircle className="h-4 w-4" />
           </button>
         )}
+
+        {pedido.estado === "completado" && (
+          <button
+            onClick={() => setShowRefund(true)}
+            disabled={isPending}
+            className="inline-flex items-center gap-1.5 rounded-full bg-white text-orange-600 ring-1 ring-orange-200 px-3 py-2.5 text-sm font-semibold transition hover:bg-orange-50 active:scale-95 disabled:opacity-50"
+            title="Registrar devolución"
+          >
+            <Undo2 className="h-4 w-4" />
+          </button>
+        )}
       </div>
+
+      {pedido.estado === "devuelto" && (
+        <div className="flex gap-2 rounded-xl bg-orange-50 ring-1 ring-orange-200 p-2.5 text-xs text-orange-900">
+          <AlertTriangle className="h-4 w-4 text-orange-600 shrink-0 mt-0.5" />
+          <div className="space-y-0.5">
+            <div className="font-semibold">
+              Devolución registrada
+              {pedido.devuelto_monto_usd != null && (
+                <> · {formatUSD(Number(pedido.devuelto_monto_usd))}</>
+              )}
+            </div>
+            {pedido.motivo_devolucion && (
+              <div>Motivo: {pedido.motivo_devolucion}</div>
+            )}
+            {pedido.devuelto_at && (
+              <div className="text-orange-700/80">
+                {new Date(pedido.devuelto_at).toLocaleString("es-VE")}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {showRefund && (
+        <div
+          className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4"
+          onClick={() => setShowRefund(false)}
+        >
+          <div
+            className="w-full max-w-sm rounded-3xl bg-white p-5 shadow-mana-glow"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-2 mb-3">
+              <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-orange-100 text-orange-600">
+                <Undo2 className="h-4 w-4" />
+              </span>
+              <div>
+                <h4 className="font-display font-black text-mana-ink">
+                  Registrar devolución
+                </h4>
+                <p className="text-[11px] text-mana-muted">
+                  Pedido #{String(pedido.numero).padStart(4, "0")} ·{" "}
+                  {formatUSD(Number(pedido.total_usd))}
+                </p>
+              </div>
+            </div>
+
+            <label className="block text-xs font-semibold text-mana-ink mb-1">
+              Monto devuelto (USD)
+            </label>
+            <input
+              type="text"
+              inputMode="decimal"
+              value={refundMonto}
+              onChange={(e) => setRefundMonto(e.target.value)}
+              className="input-mana mb-3"
+              placeholder="0.00"
+            />
+
+            <label className="block text-xs font-semibold text-mana-ink mb-1">
+              Motivo
+            </label>
+            <select
+              value={refundMotivo}
+              onChange={(e) => setRefundMotivo(e.target.value)}
+              className="input-mana mb-3"
+            >
+              <option value="">— Selecciona —</option>
+              <option value="Producto incorrecto">Producto incorrecto</option>
+              <option value="Producto en mal estado">
+                Producto en mal estado
+              </option>
+              <option value="Demora en la entrega">Demora en la entrega</option>
+              <option value="Cliente insatisfecho">Cliente insatisfecho</option>
+              <option value="Pago duplicado">Pago duplicado</option>
+              <option value="Otro">Otro</option>
+            </select>
+
+            <div className="flex gap-2 justify-end">
+              <button
+                onClick={() => setShowRefund(false)}
+                className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-mana-ink ring-1 ring-black/10 hover:bg-mana-cream"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={registrarDevolucion}
+                disabled={isPending || !Number(refundMonto)}
+                className="rounded-full bg-orange-500 px-4 py-2 text-sm font-semibold text-white shadow-mana-soft hover:brightness-95 disabled:opacity-50"
+              >
+                Confirmar devolución
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </motion.article>
   );
 }

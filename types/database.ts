@@ -37,7 +37,12 @@ export type Configuracion = {
   updated_at: string;
 };
 
-export type EstadoPedido = "nuevo" | "contactado" | "completado" | "cancelado";
+export type EstadoPedido =
+  | "nuevo"
+  | "contactado"
+  | "completado"
+  | "cancelado"
+  | "devuelto";
 
 export type Pedido = {
   id: string;
@@ -56,6 +61,10 @@ export type Pedido = {
   estado: EstadoPedido;
   notas: string | null;
   created_at: string;
+  // Devoluciones (opcionales; existen desde la migración 005)
+  devuelto_at?: string | null;
+  devuelto_monto_usd?: number | null;
+  motivo_devolucion?: string | null;
 };
 
 export type PedidoItem = {
