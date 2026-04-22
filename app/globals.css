@@ -106,3 +106,54 @@ html {
 .no-scrollbar::-webkit-scrollbar {
   display: none; /* Chrome/Safari */
 }
+
+/* =========================================================
+   ESTILOS DE IMPRESIÓN (reportes de ventas, etc.)
+   ========================================================= */
+@media print {
+  /* Evitamos márgenes de impresora innecesarios */
+  @page {
+    margin: 12mm 10mm;
+    size: A4;
+  }
+
+  html,
+  body {
+    background: #fff !important;
+    color: #000 !important;
+    font-size: 11px;
+  }
+
+  /* Oculta elementos decorativos que no aportan al reporte */
+  header,
+  footer,
+  nav,
+  .no-print,
+  .print\:hidden {
+    display: none !important;
+  }
+
+  /* Tarjetas: sin sombra y con borde fino para ahorrar tinta */
+  .card-mana {
+    box-shadow: none !important;
+    border: 1px solid #d4d4d4 !important;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  /* Evita cortar tablas a mitad */
+  table {
+    break-inside: auto;
+    page-break-inside: auto;
+  }
+  tr {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  thead {
+    display: table-header-group;
+  }
+  tfoot {
+    display: table-footer-group;
+  }
+}
