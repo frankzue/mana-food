@@ -251,90 +251,21 @@ export function OrderCard({ pedido, businessName, payment }: Props) {
         </div>
       )}
 
-      {/* Acciones: fila 1 acción principal (contactar), fila 2 transiciones de estado */}
-      <div className="pt-1 space-y-2">
-        <div className="flex gap-2">
-          <button
-            onClick={handleContactar}
-            className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-[#25D366] px-4 py-3 text-sm font-bold text-white shadow-mana-soft transition hover:brightness-95 active:scale-[0.98]"
-          >
-            <MessageCircle className="h-4 w-4" />
-            Contactar por WhatsApp
-          </button>
-          <button
-            onClick={handleCopy}
-            className={[
-              "inline-flex items-center justify-center gap-1.5 rounded-xl px-3 py-3 text-xs font-bold transition ring-1 active:scale-[0.98] min-w-[96px]",
-              copied
-                ? "bg-mana-success text-white ring-mana-success"
-                : "bg-white text-mana-ink ring-black/10 hover:ring-mana-red/40",
-            ].join(" ")}
-            title="Copiar el mensaje completo listo para WhatsApp"
-          >
-            {copied ? (
-              <>
-                <Check className="h-3.5 w-3.5" /> Copiado
-              </>
-            ) : (
-              <>
-                <Copy className="h-3.5 w-3.5" /> Copiar
-              </>
-            )}
-          </button>
-        </div>
-
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-          {(pedido.estado === "contactado" || pedido.estado === "nuevo") && (
-            <button
-              onClick={() => updateEstado("pagado")}
-              disabled={isPending}
-              className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-blue-500 px-3 py-2.5 text-xs font-bold text-white shadow-mana-soft transition hover:brightness-95 active:scale-[0.98] disabled:opacity-50"
-              title="Marcar como pagado"
-            >
-              <Wallet className="h-3.5 w-3.5" />
-              Marcar pagado
-            </button>
-          )}
-
-          {pedido.estado !== "completado" && pedido.estado !== "devuelto" && pedido.estado !== "cancelado" && (
-            <button
-              onClick={() => updateEstado("completado")}
-              disabled={isPending}
-              className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-mana-success px-3 py-2.5 text-xs font-bold text-white shadow-mana-soft transition hover:brightness-95 active:scale-[0.98] disabled:opacity-50"
-              title="Marcar pedido completado (entregado)"
-            >
-              <CheckCircle2 className="h-3.5 w-3.5" />
-              Completar
-            </button>
-          )}
-
-          {(pedido.estado === "completado" || pedido.estado === "pagado") && (
-            <button
-              onClick={() => setShowRefund(true)}
-              disabled={isPending}
-              className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-white text-orange-600 ring-1 ring-orange-300 px-3 py-2.5 text-xs font-bold transition hover:bg-orange-50 active:scale-[0.98] disabled:opacity-50"
-              title="Registrar devolución"
-            >
-              <Undo2 className="h-3.5 w-3.5" />
-              Devolver
-            </button>
-          )}
-
-          {pedido.estado !== "cancelado" &&
-            pedido.estado !== "completado" &&
-            pedido.estado !== "devuelto" && (
-              <button
-                onClick={() => updateEstado("cancelado")}
-                disabled={isPending}
-                className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-white text-mana-muted ring-1 ring-black/10 px-3 py-2.5 text-xs font-bold transition hover:bg-red-50 hover:text-red-600 hover:ring-red-300 active:scale-[0.98] disabled:opacity-50"
-                title="Cancelar pedido"
-              >
-                <XCircle className="h-3.5 w-3.5" />
-                Cancelar
-              </button>
-            )}
-        </div>
-      </div>
+      {/* Acciones: UI guiada por el estado del pedido.
+          Mostramos UNA acción principal (la que corresponde hacer ahora),
+          y en una fila chica debajo las opciones secundarias (WhatsApp, Cancelar, Devolver).
+          Así el empleado no duda sobre qué botón es el siguiente paso. */}
+      <OrderActions
+        estado={pedido.estado}
+        isPending={isPending}
+        onContactar={handleContactar}
+        onMarcarPagado={() => updateEstado("pagado")}
+        onMarcarEntregado={() => updateEstado("completado")}
+        onCancelar={() => updateEstado("cancelado")}
+        onAbrirDevolucion={() => setShowRefund(true)}
+        onCopiar={handleCopy}
+        copied={copied}
+      />
 
       {pedido.estado === "devuelto" && (
         <div className="flex gap-2 rounded-xl bg-orange-50 ring-1 ring-orange-200 p-2.5 text-xs text-orange-900">
@@ -432,5 +363,196 @@ export function OrderCard({ pedido, businessName, payment }: Props) {
         </div>
       )}
     </motion.article>
+  );
+}
+
+// =========================================================
+// OrderActions — UI guiada según el estado del pedido
+// =========================================================
+/**
+ * El patrón: un botón GRANDE que es "el siguiente paso obvio",
+ * un botón de WhatsApp secundario siempre disponible,
+ * y los iconos chicos (copiar/devolver/cancelar) que son excepciones.
+ *
+ * El empleado nunca duda qué hacer: mira el botón grande y lo pulsa.
+ */
+function OrderActions({
+  estado,
+  isPending,
+  onContactar,
+  onMarcarPagado,
+  onMarcarEntregado,
+  onCancelar,
+  onAbrirDevolucion,
+  onCopiar,
+  copied,
+}: {
+  estado: EstadoPedido;
+  isPending: boolean;
+  onContactar: () => void;
+  onMarcarPagado: () => void;
+  onMarcarEntregado: () => void;
+  onCancelar: () => void;
+  onAbrirDevolucion: () => void;
+  onCopiar: () => void;
+  copied: boolean;
+}) {
+  // Determina la acción principal según el estado del pedido.
+  type Primary = {
+    label: string;
+    sub: string;
+    icon: React.ReactNode;
+    bg: string;
+    onClick: () => void;
+  };
+
+  let primary: Primary;
+  switch (estado) {
+    case "nuevo":
+      primary = {
+        label: "Contactar por WhatsApp",
+        sub: "Saludar al cliente y enviarle los datos de pago",
+        icon: <MessageCircle className="h-5 w-5" />,
+        bg: "bg-[#25D366] hover:brightness-95",
+        onClick: onContactar,
+      };
+      break;
+    case "contactado":
+      primary = {
+        label: "Confirmar que pagó",
+        sub: "Cuando recibas la transferencia / comprobante",
+        icon: <Wallet className="h-5 w-5" />,
+        bg: "bg-blue-500 hover:bg-blue-600",
+        onClick: onMarcarPagado,
+      };
+      break;
+    case "pagado":
+      primary = {
+        label: "Marcar entregado",
+        sub: "Cuando el pedido salga o sea retirado",
+        icon: <CheckCircle2 className="h-5 w-5" />,
+        bg: "bg-mana-success hover:brightness-95",
+        onClick: onMarcarEntregado,
+      };
+      break;
+    case "completado":
+    case "cancelado":
+    case "devuelto":
+      // Sin "siguiente paso" → no se muestra botón grande principal.
+      primary = {
+        label: "",
+        sub: "",
+        icon: null,
+        bg: "",
+        onClick: () => {},
+      };
+      break;
+  }
+
+  const showPrimary =
+    estado === "nuevo" || estado === "contactado" || estado === "pagado";
+
+  // WhatsApp secundario: siempre accesible excepto en cancelado (no tiene sentido)
+  const showWhatsApp = estado !== "cancelado";
+
+  // Botones de excepción
+  const showCancelar =
+    estado !== "cancelado" &&
+    estado !== "completado" &&
+    estado !== "devuelto";
+  const showDevolver = estado === "pagado" || estado === "completado";
+
+  return (
+    <div className="pt-1 space-y-2">
+      {showPrimary && (
+        <button
+          onClick={primary.onClick}
+          disabled={isPending}
+          className={[
+            "w-full rounded-xl px-4 py-3.5 text-left text-white shadow-mana-soft transition active:scale-[0.99] disabled:opacity-50",
+            primary.bg,
+          ].join(" ")}
+        >
+          <div className="flex items-center gap-3">
+            <div className="grid place-items-center h-9 w-9 rounded-full bg-white/20 shrink-0">
+              {primary.icon}
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="text-[10px] uppercase tracking-wider font-bold opacity-80">
+                Siguiente paso
+              </div>
+              <div className="font-bold text-sm leading-tight">
+                {primary.label}
+              </div>
+              <div className="text-[11px] opacity-85 leading-tight mt-0.5 truncate">
+                {primary.sub}
+              </div>
+            </div>
+          </div>
+        </button>
+      )}
+
+      {/* Fila secundaria: WhatsApp + iconos de excepción */}
+      <div className="flex items-center gap-1.5">
+        {showWhatsApp && (
+          <button
+            onClick={onContactar}
+            className={[
+              "inline-flex items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-xs font-bold transition ring-1 active:scale-[0.98]",
+              // Si el botón principal YA ES WhatsApp, este queda en outline
+              estado === "nuevo"
+                ? "bg-white text-[#128C7E] ring-[#25D366]/40 hover:ring-[#25D366]"
+                : "bg-[#25D366] text-white ring-[#25D366] hover:brightness-95",
+            ].join(" ")}
+            title="Abrir chat de WhatsApp con el cliente"
+          >
+            <MessageCircle className="h-3.5 w-3.5" />
+            <span className="hidden xs:inline sm:inline">WhatsApp</span>
+          </button>
+        )}
+
+        <button
+          onClick={onCopiar}
+          className={[
+            "inline-flex items-center justify-center gap-1 rounded-lg px-2.5 py-2 text-[11px] font-bold transition ring-1 active:scale-[0.98]",
+            copied
+              ? "bg-mana-success text-white ring-mana-success"
+              : "bg-white text-mana-muted ring-black/10 hover:text-mana-ink hover:ring-mana-ink/30",
+          ].join(" ")}
+          title="Copiar el mensaje completo (por si WhatsApp no abre)"
+        >
+          {copied ? (
+            <Check className="h-3.5 w-3.5" />
+          ) : (
+            <Copy className="h-3.5 w-3.5" />
+          )}
+        </button>
+
+        <div className="flex-1" />
+
+        {showDevolver && (
+          <button
+            onClick={onAbrirDevolucion}
+            disabled={isPending}
+            className="inline-flex items-center gap-1 rounded-lg bg-white px-2.5 py-2 text-[11px] font-bold text-orange-600 ring-1 ring-orange-200 hover:bg-orange-50 transition active:scale-[0.98] disabled:opacity-50"
+            title="Registrar devolución de dinero"
+          >
+            <Undo2 className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Devolver</span>
+          </button>
+        )}
+        {showCancelar && (
+          <button
+            onClick={onCancelar}
+            disabled={isPending}
+            className="inline-flex items-center gap-1 rounded-lg bg-white px-2.5 py-2 text-[11px] font-bold text-mana-muted ring-1 ring-black/10 hover:text-red-600 hover:ring-red-300 hover:bg-red-50 transition active:scale-[0.98] disabled:opacity-50"
+            title="Cancelar pedido"
+          >
+            <XCircle className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Cancelar</span>
+          </button>
+        )}
+      </div>
+    </div>
   );
 }
