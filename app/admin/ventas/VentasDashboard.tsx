@@ -145,8 +145,8 @@ export function VentasDashboard({
     });
   }, [pedidos, from, to, incluirCancelados]);
 
-  // KPIs â€” tratamos 'devuelto' como pedido completado cuya venta neta se
-  // reduce por el monto devuelto. Si no hay monto explÃ­cito, se asume total.
+  // KPIs — tratamos 'devuelto' como pedido completado cuya venta neta se
+  // reduce por el monto devuelto. Si no hay monto explícito, se asume total.
   const kpis = useMemo(() => {
     let ventas = 0;
     let envios = 0;
@@ -192,7 +192,7 @@ export function VentasDashboard({
     };
   }, [filtrados]);
 
-  // Desglose por mÃ©todo de pago
+  // Desglose por método de pago
   const porMetodo = useMemo(() => {
     const map = new Map<string, { total: number; count: number }>();
     for (const p of filtrados) {
@@ -227,8 +227,8 @@ export function VentasDashboard({
     for (const p of filtrados) {
       const items = itemsByPedido[p.id] ?? [];
       for (const it of items) {
-        // Usamos solo el nombre "base" antes de " Â· " (modificadores)
-        const base = it.producto_nombre.split(" Â· ")[0] ?? it.producto_nombre;
+        // Usamos solo el nombre "base" antes de " · " (modificadores)
+        const base = it.producto_nombre.split(" · ")[0] ?? it.producto_nombre;
         const cost = productosCosto?.[base];
         const curr = map.get(base) ?? {
           nombre: base,
@@ -271,11 +271,11 @@ export function VentasDashboard({
           ? Number(p.devuelto_monto_usd)
           : Number(p.total_usd)
         : 0;
-      const netoPedido = Number(p.subtotal_usd) - refundUsd * 0; // no descontamos refund del subtotal para cÃ¡lculo de margen
+      const netoPedido = Number(p.subtotal_usd) - refundUsd * 0; // no descontamos refund del subtotal para cálculo de margen
       totalVentas += Number(p.subtotal_usd);
       const items = itemsByPedido[p.id] ?? [];
       for (const it of items) {
-        const base = it.producto_nombre.split(" Â· ")[0] ?? it.producto_nombre;
+        const base = it.producto_nombre.split(" · ")[0] ?? it.producto_nombre;
         const cost = productosCosto?.[base];
         if (cost && cost.costo_usd > 0) {
           totalCosto += cost.costo_usd * it.cantidad;
@@ -293,7 +293,7 @@ export function VentasDashboard({
     };
   }, [filtrados, itemsByPedido, productosCosto]);
 
-  // Ventas por dÃ­a (para el rango)
+  // Ventas por día (para el rango)
   const porDia = useMemo(() => {
     const map = new Map<string, number>();
     for (const p of filtrados) {
@@ -313,16 +313,16 @@ export function VentasDashboard({
 
   const rangoTexto = useMemo(() => {
     if (range === "todo") {
-      if (filtrados.length === 0) return "Todo el histÃ³rico";
+      if (filtrados.length === 0) return "Todo el histórico";
       const oldest = filtrados.reduce((a, b) =>
         new Date(a.created_at) < new Date(b.created_at) ? a : b
       );
       const newest = filtrados[0];
-      return `${formatDateShort(oldest.created_at)} â€“ ${formatDateShort(
+      return `${formatDateShort(oldest.created_at)} – ${formatDateShort(
         newest.created_at
       )}`;
     }
-    return `${formatDateShort(from.toISOString())} â€“ ${formatDateShort(
+    return `${formatDateShort(from.toISOString())} – ${formatDateShort(
       to.toISOString()
     )}`;
   }, [range, filtrados, from, to]);
@@ -330,7 +330,7 @@ export function VentasDashboard({
   const [pdfLoading, setPdfLoading] = useState(false);
 
   /**
-   * Descarga REAL del PDF usando jsPDF (no depende del diÃ¡logo de impresiÃ³n).
+   * Descarga REAL del PDF usando jsPDF (no depende del diálogo de impresión).
    * El archivo se descarga con nombre "ventas-<rango>.pdf".
    */
   async function handleDownloadPdf() {
@@ -346,7 +346,7 @@ export function VentasDashboard({
         pedidos: filtrados.map((p) => {
           const items = itemsByPedido[p.id] ?? [];
           const productos = items
-            .map((i) => `${i.cantidad}Ã— ${i.producto_nombre}`)
+            .map((i) => `${i.cantidad}× ${i.producto_nombre}`)
             .join("\n");
           const isRefunded = p.estado === "devuelto";
           const refundUsd = isRefunded
@@ -377,7 +377,7 @@ export function VentasDashboard({
     } catch (err) {
       console.error("PDF ventas", err);
       alert(
-        "No se pudo generar el PDF. Intenta de nuevo o recarga la pÃ¡gina."
+        "No se pudo generar el PDF. Intenta de nuevo o recarga la página."
       );
     } finally {
       setPdfLoading(false);
@@ -460,10 +460,10 @@ export function VentasDashboard({
         />
         <div className="flex-1">
           <h1 className="font-display text-2xl font-black">
-            {businessName} â€” Reporte de ventas
+            {businessName} — Reporte de ventas
           </h1>
           <p className="text-sm">
-            {rangoTexto} Â· Generado el {new Date().toLocaleString("es-VE")}
+            {rangoTexto} · Generado el {new Date().toLocaleString("es-VE")}
           </p>
         </div>
       </div>
@@ -566,10 +566,10 @@ export function VentasDashboard({
           value={formatUSD(kpis.ventasNetas)}
           sub={
             kpis.devolucionesUsd > 0
-              ? `Brutas ${formatUSD(kpis.ventas)} âˆ’ devoluciones ${formatUSD(
+              ? `Brutas ${formatUSD(kpis.ventas)} − devoluciones ${formatUSD(
                   kpis.devolucionesUsd
                 )}`
-              : `â‰ˆ ${formatBs(kpis.totalBs)}`
+              : `≈ ${formatBs(kpis.totalBs)}`
           }
           tone="red"
         />
@@ -577,9 +577,9 @@ export function VentasDashboard({
           icon={<Receipt className="h-5 w-5" />}
           label="Pedidos"
           value={String(kpis.pedidos)}
-          sub={`${kpis.completados} completados Â· ${kpis.enCurso} en curso${
-            kpis.devueltos ? ` Â· ${kpis.devueltos} devueltos` : ""
-          }${incluirCancelados ? ` Â· ${kpis.cancelados} cancelados` : ""}`}
+          sub={`${kpis.completados} completados · ${kpis.enCurso} en curso${
+            kpis.devueltos ? ` · ${kpis.devueltos} devueltos` : ""
+          }${incluirCancelados ? ` · ${kpis.cancelados} cancelados` : ""}`}
           tone="ink"
         />
         <Kpi
@@ -599,7 +599,7 @@ export function VentasDashboard({
                 ? `${((kpis.propinas / Math.max(1, kpis.ventas)) * 100).toFixed(
                     1
                   )}% de ventas`
-                : "AÃºn sin propinas"
+                : "Aún sin propinas"
             }
             tone="ink"
           />
@@ -610,7 +610,7 @@ export function VentasDashboard({
             value={formatUSD(kpis.devolucionesUsd)}
             sub={`${kpis.devueltos} pedidos${
               kpis.ventas > 0
-                ? ` Â· ${((kpis.devolucionesUsd / kpis.ventas) * 100).toFixed(
+                ? ` · ${((kpis.devolucionesUsd / kpis.ventas) * 100).toFixed(
                     1
                   )}% de ventas`
                 : ""
@@ -625,7 +625,7 @@ export function VentasDashboard({
           {kpis.envios > 0 && (
             <>
               De las ventas netas, {formatUSD(kpis.envios)} corresponden a
-              envÃ­os cobrados.
+              envíos cobrados.
             </>
           )}
           {kpis.propinas > 0 && (
@@ -653,11 +653,11 @@ export function VentasDashboard({
         </div>
       ) : (
         <>
-          {/* GrÃ¡fico simple por dÃ­a */}
+          {/* Gráfico simple por día */}
           {porDia.length > 1 && (
             <section className="card-mana p-4 sm:p-5">
               <h3 className="font-display font-bold text-mana-ink">
-                Ventas por dÃ­a
+                Ventas por día
               </h3>
               <div className="mt-3 flex items-end gap-1 h-32">
                 {porDia.map((d) => {
@@ -683,11 +683,11 @@ export function VentasDashboard({
             </section>
           )}
 
-          {/* Desglose por mÃ©todo de pago + Top productos */}
+          {/* Desglose por método de pago + Top productos */}
           <section className="grid gap-5 lg:grid-cols-2">
             <div className="card-mana p-4 sm:p-5">
               <h3 className="font-display font-bold text-mana-ink">
-                Desglose por mÃ©todo de pago
+                Desglose por método de pago
               </h3>
               <ul className="mt-3 space-y-2.5">
                 {porMetodo.map((m) => (
@@ -708,7 +708,7 @@ export function VentasDashboard({
                         />
                       </div>
                       <span className="text-[11px] text-mana-muted w-20 text-right">
-                        {m.count} pedidos Â· {m.pct.toFixed(0)}%
+                        {m.count} pedidos · {m.pct.toFixed(0)}%
                       </span>
                     </div>
                   </li>
@@ -719,7 +719,7 @@ export function VentasDashboard({
             <div className="card-mana p-4 sm:p-5">
               <h3 className="font-display font-bold text-mana-ink flex items-center gap-1.5">
                 <Star className="h-4 w-4 text-mana-yellow" />
-                Productos mÃ¡s vendidos
+                Productos más vendidos
               </h3>
               <ul className="mt-3 space-y-1.5">
                 {topProductos.map((p, idx) => (
@@ -731,7 +731,7 @@ export function VentasDashboard({
                       <strong className="text-mana-red">#{idx + 1}</strong>{" "}
                       {p.nombre}{" "}
                       <span className="text-mana-muted">
-                        Ã— {p.cantidad}
+                        × {p.cantidad}
                       </span>
                     </span>
                     <div className="text-right shrink-0">
@@ -771,15 +771,15 @@ export function VentasDashboard({
               ) : gananciaBruta ? (
                 <div className="mt-3 rounded-xl bg-mana-success/10 ring-1 ring-mana-success/20 p-3 text-xs">
                   <div className="flex justify-between">
-                    <span className="text-mana-muted">Ventas de menÃº</span>
+                    <span className="text-mana-muted">Ventas de menú</span>
                     <span className="font-semibold">
                       {formatUSD(gananciaBruta.ventas)}
                     </span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-mana-muted">Costo mercancÃ­a</span>
+                    <span className="text-mana-muted">Costo mercancía</span>
                     <span className="font-semibold">
-                      âˆ’ {formatUSD(gananciaBruta.costo)}
+                      − {formatUSD(gananciaBruta.costo)}
                     </span>
                   </div>
                   <div className="flex justify-between pt-1 mt-1 border-t border-mana-success/20">
@@ -841,7 +841,7 @@ export function VentasDashboard({
                     <th className="text-left px-3 py-2 hidden sm:table-cell">
                       Zona
                     </th>
-                    <th className="text-left px-3 py-2">MÃ©todo</th>
+                    <th className="text-left px-3 py-2">Método</th>
                     <th className="text-left px-3 py-2">Estado</th>
                     <th className="text-right px-3 py-2">Total</th>
                   </tr>
@@ -914,7 +914,7 @@ export function VentasDashboard({
                         {p.estado === "devuelto" &&
                           p.devuelto_monto_usd != null && (
                             <div className="text-[10px] text-orange-700 font-semibold">
-                              âˆ’ {formatUSD(Number(p.devuelto_monto_usd))}
+                              − {formatUSD(Number(p.devuelto_monto_usd))}
                             </div>
                           )}
                       </td>
@@ -941,11 +941,11 @@ export function VentasDashboard({
                         colSpan={6}
                         className="px-3 py-2 text-right text-xs font-semibold text-orange-700"
                       >
-                        âˆ’ Devoluciones
+                        − Devoluciones
                       </td>
                       <td className="px-3 py-2 text-right">
                         <div className="font-bold text-orange-700">
-                          âˆ’ {formatUSD(kpis.devolucionesUsd)}
+                          − {formatUSD(kpis.devolucionesUsd)}
                         </div>
                       </td>
                     </tr>
