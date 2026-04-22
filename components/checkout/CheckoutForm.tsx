@@ -215,7 +215,10 @@ export function CheckoutForm({ zonas, tasaBs, ivaRate, demoMode }: Props) {
 
         const data = await res.json();
         if (!res.ok) {
-          setError(data.error ?? "No se pudo enviar el pedido");
+          const base = data.error ?? "No se pudo enviar el pedido";
+          const detalle = data.detalle ? `: ${data.detalle}` : "";
+          setError(`${base}${detalle}`);
+          console.error("Error al crear pedido", data);
           return;
         }
 

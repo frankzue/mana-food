@@ -191,8 +191,15 @@ export async function POST(request: Request) {
 
     if (insertErr || !pedido) {
       console.error("Error insertando pedido", insertErr);
+      // Devolvemos el detalle del error de Postgres para poder diagnosticar
+      // (columna faltante, check constraint, etc.) desde el navegador.
       return NextResponse.json(
-        { error: "No se pudo crear el pedido" },
+        {
+          error: "No se pudo crear el pedido",
+          detalle: insertErr?.message ?? null,
+          hint: insertErr?.hint ?? null,
+          code: insertErr?.code ?? null,
+        },
         { status: 500 }
       );
     }
@@ -214,7 +221,12 @@ export async function POST(request: Request) {
       console.error("Error insertando items", itemsErr);
       await supabase.from("pedidos").delete().eq("id", pedido.id);
       return NextResponse.json(
-        { error: "No se pudieron crear los items del pedido" },
+        {
+          error: "No se pudieron crear los items del pedido",
+          detalle: itemsErr.message,
+          hint: itemsErr.hint ?? null,
+          code: itemsErr.code ?? null,
+        },
         { status: 500 }
       );
     }

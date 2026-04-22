@@ -32,12 +32,12 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-40 bg-gradient-to-r from-[#141414] via-[#1f0d10] to-[#141414] backdrop-blur-md shadow-mana-soft">
-      {/* Fila principal: logo + nombre + tagline + estado */}
-      <div className="container flex items-center gap-3 py-2.5">
+      {/* Fila principal: logo + nombre + info centrada verticalmente */}
+      <div className="container flex items-center gap-3.5 py-3.5">
         <Link
           href="/"
           aria-label="Ir al inicio Maná Fast Food"
-          className="flex items-center gap-3 min-w-0 rounded-xl transition-transform active:scale-[0.97] hover:opacity-95"
+          className="flex items-center gap-3.5 min-w-0 flex-1 rounded-xl transition-transform active:scale-[0.98] hover:opacity-95"
         >
           {/* Halo amarillo detrás del logo (glow de marca) */}
           <div className="relative shrink-0">
@@ -49,28 +49,27 @@ export function Header() {
                   "radial-gradient(circle at center, rgba(255,199,44,0.45) 0%, rgba(255,199,44,0.12) 45%, transparent 70%)",
               }}
             />
-            <div className="relative h-11 w-11 rounded-xl overflow-hidden bg-mana-black ring-1 ring-mana-yellow/40 shadow-[0_4px_16px_rgba(255,199,44,0.18)]">
+            <div className="relative h-14 w-14 sm:h-16 sm:w-16 rounded-xl overflow-hidden bg-mana-black ring-1 ring-mana-yellow/40 shadow-[0_4px_16px_rgba(255,199,44,0.18)]">
               <Image
                 src="/logo.png"
                 alt="Maná Fast Food"
                 fill
-                sizes="44px"
+                sizes="64px"
                 className="object-contain"
                 priority
               />
             </div>
           </div>
 
-          <div className="min-w-0 flex-1">
-            {/* Línea 1: Nombre + pill de estado (Abierto/Cerrado con horario) */}
+          {/* Contenido: ocupa toda la altura del logo y queda centrado verticalmente.
+              El nombre arriba (pegado al logo), debajo el horario y tagline
+              alineados consistentemente. */}
+          <div className="min-w-0 flex-1 flex flex-col justify-center gap-1.5 py-0.5">
+            {/* Línea 1: Nombre + pill de estado */}
             <div className="flex items-center gap-2 min-w-0">
-              <h1 className="font-display text-[15px] sm:text-base font-black text-white leading-none tracking-tight truncate">
+              <h1 className="font-display text-base sm:text-lg font-black text-white leading-none tracking-tight truncate">
                 {BUSINESS.name}
               </h1>
-
-              {/* Pill de estado MÁS PROMINENTE + horario integrado.
-                  Al leer "ABIERTO · 6 PM - 4 AM" el cliente sabe enseguida
-                  si estamos atendiendo y hasta qué hora. */}
               <span
                 className={[
                   "inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] sm:text-[11px] font-bold uppercase tracking-wider shrink-0 ring-1",
@@ -96,18 +95,17 @@ export function Header() {
               </span>
             </div>
 
-            {/* Línea 2: horario + tagline. El horario queda JUSTO debajo del nombre,
-                fácil de leer y con buen contraste. */}
-            <div className="mt-1 flex items-center gap-2 text-[11px] leading-none">
+            {/* Línea 2: horario + tagline — alineada verticalmente con el resto */}
+            <div className="flex items-center gap-2 text-[11.5px] sm:text-xs leading-none">
               <span className="inline-flex items-center gap-1 text-white/90 font-semibold shrink-0">
                 <Clock
-                  className="h-3 w-3 text-mana-yellow"
+                  className="h-3.5 w-3.5 text-mana-yellow"
                   strokeWidth={2.4}
                 />
                 6 PM – 4 AM
               </span>
               <span className="text-white/25 select-none">•</span>
-              <span className="text-white/65 truncate">
+              <span className="text-white/70 truncate">
                 Hecho al{" "}
                 <span className="text-mana-yellow font-semibold">momento</span>
               </span>
@@ -116,14 +114,13 @@ export function Header() {
         </Link>
       </div>
 
-      {/* Fila secundaria: dirección + delivery (el horario ya está arriba) */}
+      {/* Fila secundaria: dirección + delivery */}
       <div className="border-t border-white/5 bg-black/30">
         <div className="container">
           <div
-            className="flex items-center gap-0 py-1.5 text-[11px] text-white/80 overflow-x-auto whitespace-nowrap pr-4 [&::-webkit-scrollbar]:hidden"
+            className="flex items-center gap-0 py-2 text-[11.5px] text-white/80 overflow-x-auto whitespace-nowrap pr-4 [&::-webkit-scrollbar]:hidden"
             style={{ scrollbarWidth: "none" }}
           >
-            {/* Dirección: chip clickeable que abre Google Maps */}
             <a
               href={mapsUrl}
               target="_blank"
