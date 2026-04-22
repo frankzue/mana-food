@@ -1,0 +1,17 @@
+{
+  "name": "Maná Fast Food",
+  "short_name": "Maná",
+  "description": "Pide tu comida favorita de Maná Fast Food",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FFF8EC",
+  "theme_color": "#C8102E",
+  "icons": [
+    {
+      "src": "/logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

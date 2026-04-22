@@ -1,0 +1,99 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 40 100% 96%;
+    --foreground: 0 0% 10%;
+    --border: 0 0% 90%;
+    --input: 0 0% 90%;
+    --ring: 351 82% 43%;
+  }
+
+  .dark {
+    --background: 0 0% 4%;
+    --foreground: 40 100% 96%;
+    --border: 0 0% 15%;
+    --input: 0 0% 15%;
+    --ring: 43 100% 58%;
+  }
+
+  * {
+    border-color: hsl(var(--border));
+  }
+
+  html,
+  body {
+    height: 100%;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    background-color: #fff8ec;
+    color: #1a1a1a;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-full bg-mana-red px-6 py-3 font-semibold text-white shadow-mana transition-all hover:bg-mana-red-dark active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 rounded-full bg-mana-yellow px-6 py-3 font-semibold text-mana-ink shadow-mana-soft transition-all hover:bg-mana-yellow-dark active:scale-[0.98];
+  }
+
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 rounded-full bg-white/80 px-4 py-2 font-medium text-mana-ink transition-all hover:bg-white active:scale-[0.98];
+  }
+
+  .card-mana {
+    @apply rounded-2xl bg-white shadow-mana-soft ring-1 ring-black/5 transition-shadow hover:shadow-lg;
+  }
+
+  .chip {
+    @apply inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold;
+  }
+
+  .input-mana {
+    @apply w-full rounded-xl border border-black/10 bg-white px-4 py-3 text-mana-ink placeholder:text-mana-muted focus:border-mana-red focus:outline-none focus:ring-2 focus:ring-mana-red/20;
+  }
+
+  .shimmer {
+    background: linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0) 0%,
+      rgba(255, 255, 255, 0.4) 50%,
+      rgba(255, 255, 255, 0) 100%
+    );
+    background-size: 200% 100%;
+    @apply animate-shimmer;
+  }
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+::selection {
+  background: #ffc72c;
+  color: #0a0a0a;
+}
+
+/* Scrollbar suave */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: #fff8ec;
+}
+::-webkit-scrollbar-thumb {
+  background: #c8102e;
+  border-radius: 5px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #a00d24;
+}
