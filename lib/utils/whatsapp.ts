@@ -62,8 +62,7 @@ export function buildWhatsAppMessage(
     );
   }
   lines.push("");
-  lines.push(`Subtotal: ${formatUSD(Number(pedido.subtotal_usd))}`);
-  lines.push(`IVA: ${formatUSD(Number(pedido.iva_usd))}`);
+  lines.push(`Subtotal: ${formatUSD(Number(pedido.subtotal_usd))} _(IVA incluido)_`);
   lines.push(
     `Envío (${pedido.zona_nombre}): ${formatUSD(Number(pedido.envio_usd))}`
   );

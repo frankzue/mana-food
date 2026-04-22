@@ -208,11 +208,13 @@ export default async function SuccessPage({
                 label="Subtotal"
                 value={formatUSD(Number(pedido.subtotal_usd))}
               />
-              <Row label="IVA" value={formatUSD(Number(pedido.iva_usd))} />
               <Row
                 label={pedido.zona_nombre ?? "Envío"}
                 value={formatUSD(Number(pedido.envio_usd))}
               />
+              <p className="text-[11px] text-mana-muted italic">
+                * Precios con IVA incluido.
+              </p>
               <div className="border-t border-black/10 mt-2 pt-2 flex justify-between items-end">
                 <span className="font-display font-bold text-lg">Total</span>
                 <div className="text-right">

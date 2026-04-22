@@ -191,13 +191,10 @@ export function OrderCard({ pedido, businessName, payment }: Props) {
             <span>{formatUSD(Number(pedido.subtotal_usd))}</span>
           </div>
           <div className="flex justify-between">
-            <span>IVA</span>
-            <span>{formatUSD(Number(pedido.iva_usd))}</span>
-          </div>
-          <div className="flex justify-between">
             <span>Envío</span>
             <span>{formatUSD(Number(pedido.envio_usd))}</span>
           </div>
+          <p className="italic pt-0.5">* IVA incluido</p>
         </div>
       </div>
 

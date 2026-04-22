@@ -29,10 +29,12 @@ export function calcularTotales(params: {
   tasa_bs: number;
   iva_rate: number;
 }): TotalsBreakdown {
+  // Los precios del menú ya incluyen el IVA, así que NO lo sumamos al total.
+  // iva_usd queda en 0 (no es un cargo extra) y total = subtotal + envio.
   const subtotal_usd = calcularSubtotal(params.items);
-  const iva_usd = round2(subtotal_usd * params.iva_rate);
+  const iva_usd = 0;
   const envio_usd = round2(params.envio_usd);
-  const total_usd = round2(subtotal_usd + iva_usd + envio_usd);
+  const total_usd = round2(subtotal_usd + envio_usd);
   const total_bs = round2(total_usd * params.tasa_bs);
 
   return {

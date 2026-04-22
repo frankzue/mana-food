@@ -91,15 +91,11 @@ export function OrderSuccessModal({
                 <MessageCircle className="h-4 w-4" /> WhatsApp
               </span>{" "}
               al <strong className="text-mana-ink">{telefono}</strong> en los
-              próximos minutos para confirmar el pago ({metodoPago}) y
-              coordinar la entrega.
+              próximos minutos con los datos para el pago ({metodoPago}) y
+              para coordinar la entrega.
             </p>
 
-            <div className="mt-5 rounded-2xl bg-mana-cream-dark p-3.5 text-left text-xs text-mana-muted space-y-1">
-              <p>
-                <strong className="text-mana-ink">Siguiente paso:</strong>{" "}
-                ten listo el comprobante de pago para enviarlo por WhatsApp.
-              </p>
+            <div className="mt-5 rounded-2xl bg-mana-cream-dark p-3.5 text-left text-xs text-mana-muted">
               <p>
                 Guarda tu número de orden por si necesitas consultarlo.
               </p>

@@ -544,12 +544,6 @@ export function CheckoutForm({ zonas, tasaBs, ivaRate, demoMode }: Props) {
             </div>
             <div className="flex justify-between">
               <span className="text-mana-muted">
-                IVA ({Math.round(ivaRate * 100)}%)
-              </span>
-              <span className="font-semibold">{formatUSD(totales.iva_usd)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-mana-muted">
                 {form.modalidad === "pickup"
                   ? "Retiro en tienda"
                   : `Envío${
@@ -564,6 +558,9 @@ export function CheckoutForm({ zonas, tasaBs, ivaRate, demoMode }: Props) {
                   : "—"}
               </span>
             </div>
+            <p className="text-[11px] text-mana-muted italic pt-0.5">
+              * Precios con IVA incluido.
+            </p>
           </div>
 
           <div className="bg-mana-cream-dark rounded-xl p-4 flex items-end justify-between">
