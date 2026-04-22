@@ -18,10 +18,12 @@ import { summarizeModifiers } from "@/lib/modifiers";
 
 type Props = {
   tasaBs: number;
+  /** Se mantiene en la API por compatibilidad, pero ya NO se aplica:
+   *  los precios del menú incluyen IVA. */
   ivaRate: number;
 };
 
-export function CartDrawer({ tasaBs, ivaRate }: Props) {
+export function CartDrawer({ tasaBs, ivaRate: _ivaRate }: Props) {
   const router = useRouter();
   const isOpen = useCart((s) => s.isOpen);
   const close = useCart((s) => s.close);
@@ -30,12 +32,12 @@ export function CartDrawer({ tasaBs, ivaRate }: Props) {
   const dec = useCart((s) => s.decrement);
   const remove = useCart((s) => s.removeItem);
 
+  // IVA ya va dentro del precio unitario → estimado = subtotal (+ delivery en el siguiente paso).
   const subtotal = items.reduce(
     (s, i) => s + i.precio_unit_usd * i.cantidad,
     0
   );
-  const iva = subtotal * ivaRate;
-  const estimado = subtotal + iva;
+  const estimado = subtotal;
 
   const goCheckout = () => {
     close();
@@ -197,11 +199,9 @@ export function CartDrawer({ tasaBs, ivaRate }: Props) {
                       {formatUSD(subtotal)}
                     </span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-mana-muted">
-                      IVA ({Math.round(ivaRate * 100)}%)
-                    </span>
-                    <span className="font-semibold">{formatUSD(iva)}</span>
+                  <div className="flex justify-between text-xs text-mana-muted italic">
+                    <span>IVA</span>
+                    <span>incluido en el precio</span>
                   </div>
                   <div className="flex justify-between text-xs text-mana-muted italic">
                     <span>Envío</span>
