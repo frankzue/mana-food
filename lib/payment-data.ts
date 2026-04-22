@@ -43,6 +43,20 @@ export function nombreBanco(code: string): string {
   return b ? `${b.code} ${b.nombre}` : code;
 }
 
+/**
+ * Versión corta y legible para el mensaje de WhatsApp del cliente.
+ * Elimina el código y los prefijos "Banco de / Banco del" para que quede
+ * limpio: "0102 Banco de Venezuela" -> "Venezuela", "0134 Banesco" -> "Banesco".
+ */
+export function nombreBancoCorto(code: string): string {
+  const b = BANCOS_VE.find((x) => x.code === code);
+  if (!b) return code;
+  return b.nombre
+    .replace(/^Banco de\s+/i, "")
+    .replace(/^Banco del\s+/i, "")
+    .trim();
+}
+
 export const OPERADORAS_VE = ["0412", "0414", "0416", "0424", "0426"] as const;
 
 export const TIPOS_DOCUMENTO = [
@@ -238,8 +252,8 @@ export function formatPagoMovil(d: PagoMovilData): string {
     d.doc_tipo && d.doc_numero ? `${d.doc_tipo}-${d.doc_numero}` : "";
 
   return [
-    line("Banco", d.banco ? nombreBanco(d.banco) : ""),
-    line("C.I. / RIF", cedula),
+    line("Banco", d.banco ? nombreBancoCorto(d.banco) : ""),
+    line("C.I.", cedula),
     line("Teléfono", tel),
     line("Titular", d.titular),
   ]
@@ -282,10 +296,10 @@ export function formatTransferencia(d: TransferenciaData): string {
         )}-${digits.slice(10)}`
       : d.cuenta;
   return [
-    line("Banco", d.banco ? nombreBanco(d.banco) : ""),
+    line("Banco", d.banco ? nombreBancoCorto(d.banco) : ""),
     line("Tipo de cuenta", tipo),
     line("N° de cuenta", cuentaFmt),
-    line("C.I. / RIF", cedula),
+    line("C.I.", cedula),
     line("Titular", d.titular),
   ]
     .filter(Boolean)

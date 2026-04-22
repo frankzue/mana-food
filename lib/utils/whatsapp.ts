@@ -47,13 +47,19 @@ export function getPaymentInstructions(
 
 /**
  * Mensaje completo para WhatsApp. Incluye saludo, detalle del pedido,
- * totales y datos de pago según el método elegido.
+ * totales con tasa BCV, datos de pago y cierre profesional con checklist.
  */
 export function buildWhatsAppMessage(
   pedido: PedidoConItems,
   businessName = "Maná Fast Food",
   payment?: PaymentDetails
 ): string {
+  const totalUsd = Number(pedido.total_usd);
+  const totalBs = Number(pedido.total_bs);
+  const tasaBs = Number(pedido.tasa_bs);
+  const propina = Number(pedido.propina_usd ?? 0);
+  const esDelivery = pedido.zona_id != null;
+
   const lines: string[] = [];
   lines.push(`Hola ${pedido.cliente_nombre} 👋`);
   lines.push("");
@@ -63,7 +69,9 @@ export function buildWhatsAppMessage(
     ).padStart(4, "0")}* con éxito. 🍔`
   );
   lines.push("");
-  lines.push("*🧾 Detalle:*");
+
+  // Detalle
+  lines.push("*🧾 Detalle del pedido:*");
   for (const it of pedido.items) {
     lines.push(
       `• ${it.cantidad}× ${it.producto_nombre} — ${formatUSD(
@@ -72,36 +80,75 @@ export function buildWhatsAppMessage(
     );
   }
   lines.push("");
+
+  // Entrega (zona y notas) — así el cliente confirma que la dirección está correcta
+  lines.push(
+    `*📍 Entrega:* ${
+      esDelivery
+        ? `Delivery · ${pedido.zona_nombre}`
+        : `Retiro en tienda · ${pedido.zona_nombre}`
+    }`
+  );
+  if (pedido.notas && pedido.notas.trim()) {
+    lines.push(`_Nota:_ ${pedido.notas.trim()}`);
+  }
+  lines.push("");
+
+  // Totales
   lines.push(`Subtotal: ${formatUSD(Number(pedido.subtotal_usd))} _(IVA incluido)_`);
   lines.push(
     `Envío (${pedido.zona_nombre}): ${formatUSD(Number(pedido.envio_usd))}`
   );
-  const propina = Number(pedido.propina_usd ?? 0);
   if (propina > 0) {
     lines.push(`Propina: ${formatUSD(propina)} 🙌`);
   }
+  lines.push(`*Total a pagar: ${formatUSD(totalUsd)}*`);
   lines.push(
-    `*Total: ${formatUSD(Number(pedido.total_usd))} · ${formatBs(
-      Number(pedido.total_bs)
-    )}*`
+    `_Tasa BCV: 1 USD = ${tasaBs.toFixed(2)} Bs · al cambio = ${formatBs(
+      totalBs
+    )}_`
   );
   lines.push("");
-  lines.push(`*Método de pago:* ${pedido.metodo_pago}`);
 
+  // Método + datos de pago
+  lines.push(`*💳 Método de pago:* ${pedido.metodo_pago}`);
   if (payment) {
     const pagoInfo = getPaymentInstructions(pedido.metodo_pago, payment);
     if (pagoInfo) {
       lines.push("");
-      lines.push("*💳 Datos para el pago:*");
+      lines.push("*Datos para el pago:*");
       lines.push(pagoInfo);
+      lines.push("");
+      lines.push(
+        `*Monto a pagar:* ${formatUSD(totalUsd)} · ${formatBs(totalBs)}`
+      );
     }
   }
 
+  // Cierre: checklist de revisión antes del pago
+  lines.push("");
+  lines.push("━━━━━━━━━━━━━━━━━━━");
+  lines.push("*Antes de pagar, confirma que todo esté correcto:*");
+  lines.push("✅ Productos y cantidades");
+  lines.push(
+    esDelivery ? "✅ Zona de entrega y dirección" : "✅ Hora de retiro"
+  );
+  lines.push("✅ Método de pago y total");
   lines.push("");
   lines.push(
-    "Por favor envíanos el comprobante de pago por este medio para confirmar y despachar tu pedido. ¡Gracias por elegirnos! 🙌"
+    "Si todo está en orden, realiza el pago y envíanos el *comprobante* por este mismo chat para confirmar y despachar tu pedido."
   );
+  lines.push("");
+  lines.push(
+    "Si necesitas cambiar algo (producto, dirección, hora), respóndenos *antes* de pagar y lo ajustamos. 🙌"
+  );
+  lines.push("");
+  lines.push(`¡Gracias por preferirnos, ${firstName(pedido.cliente_nombre)}!`);
   return lines.join("\n");
+}
+
+function firstName(full: string): string {
+  return (full ?? "").trim().split(/\s+/)[0] ?? "";
 }
 
 /**
