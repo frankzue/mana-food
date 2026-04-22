@@ -97,3 +97,12 @@ html {
 ::-webkit-scrollbar-thumb:hover {
   background: #a00d24;
 }
+
+/* Utilidad: ocultar scrollbar (p.ej. en tabs horizontales) */
+.no-scrollbar {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge */
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none; /* Chrome/Safari */
+}

@@ -211,7 +211,7 @@ export function OrdersBoard({
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2 justify-between">
-        <div className="flex gap-1.5 overflow-x-auto">
+        <div className="flex gap-1.5 overflow-x-auto no-scrollbar py-1">
           {FILTERS.map((f) => {
             const active = filter === f.key;
             const n = counts[f.key] ?? 0;
