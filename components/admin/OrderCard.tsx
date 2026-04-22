@@ -21,6 +21,8 @@ import {
   Check,
   Undo2,
   AlertTriangle,
+  Wallet,
+  Heart,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
@@ -46,6 +48,11 @@ const estadoConfig: Record<
     label: "Contactado",
     bg: "bg-mana-yellow",
     text: "text-mana-ink",
+  },
+  pagado: {
+    label: "Pagado",
+    bg: "bg-blue-500",
+    text: "text-white",
   },
   completado: {
     label: "Completado",
@@ -225,6 +232,14 @@ export function OrderCard({ pedido, businessName, payment }: Props) {
             <span>Envío</span>
             <span>{formatUSD(Number(pedido.envio_usd))}</span>
           </div>
+          {Number(pedido.propina_usd ?? 0) > 0 && (
+            <div className="flex justify-between text-mana-red font-semibold">
+              <span className="inline-flex items-center gap-1">
+                <Heart className="h-3 w-3" /> Propina
+              </span>
+              <span>{formatUSD(Number(pedido.propina_usd))}</span>
+            </div>
+          )}
           <p className="italic pt-0.5">* IVA incluido</p>
         </div>
       </div>
@@ -243,6 +258,18 @@ export function OrderCard({ pedido, businessName, payment }: Props) {
         >
           <MessageCircle className="h-4 w-4" /> Contactar Cliente
         </button>
+
+        {(pedido.estado === "contactado" || pedido.estado === "nuevo") && (
+          <button
+            onClick={() => updateEstado("pagado")}
+            disabled={isPending}
+            className="inline-flex items-center gap-1.5 rounded-full bg-blue-500 px-3 py-2.5 text-sm font-semibold text-white shadow-mana-soft transition hover:brightness-95 active:scale-95 disabled:opacity-50"
+            title="Marcar como pagado"
+          >
+            <Wallet className="h-4 w-4" />
+            <span className="hidden sm:inline">Pagado</span>
+          </button>
+        )}
 
         <button
           onClick={handleCopy}
@@ -287,7 +314,7 @@ export function OrderCard({ pedido, businessName, payment }: Props) {
           </button>
         )}
 
-        {pedido.estado === "completado" && (
+        {(pedido.estado === "completado" || pedido.estado === "pagado") && (
           <button
             onClick={() => setShowRefund(true)}
             disabled={isPending}

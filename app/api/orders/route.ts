@@ -156,6 +156,7 @@ export async function POST(request: Request) {
       envio_usd,
       tasa_bs,
       iva_rate,
+      propina_usd: input.propina_usd ?? 0,
     });
 
     const notasArr: string[] = [];
@@ -178,6 +179,7 @@ export async function POST(request: Request) {
         subtotal_usd: totales.subtotal_usd,
         iva_usd: totales.iva_usd,
         envio_usd: totales.envio_usd,
+        propina_usd: totales.propina_usd,
         total_usd: totales.total_usd,
         tasa_bs: totales.tasa_bs,
         total_bs: totales.total_bs,

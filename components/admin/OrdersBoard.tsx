@@ -24,6 +24,7 @@ const FILTERS: { key: EstadoPedido | "todos"; label: string }[] = [
   { key: "todos", label: "Todos" },
   { key: "nuevo", label: "Nuevos" },
   { key: "contactado", label: "Contactados" },
+  { key: "pagado", label: "Pagados" },
   { key: "completado", label: "Completados" },
   { key: "devuelto", label: "Devueltos" },
   { key: "cancelado", label: "Cancelados" },

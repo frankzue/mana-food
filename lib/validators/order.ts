@@ -31,6 +31,12 @@ export const createOrderSchema = z
     modalidad: z.enum(["delivery", "pickup"]).default("delivery"),
     zona_id: z.string().uuid("Zona inválida").optional().nullable(),
     notas: z.string().max(300).optional().nullable(),
+    propina_usd: z
+      .number()
+      .min(0, "Propina inválida")
+      .max(1000, "Propina demasiado alta")
+      .optional()
+      .default(0),
     items: z.array(orderItemSchema).min(1, "El carrito está vacío"),
   })
   .refine(

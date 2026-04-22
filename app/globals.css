@@ -122,6 +122,17 @@ html {
     background: #fff !important;
     color: #000 !important;
     font-size: 11px;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
+  }
+
+  /* Muestra siempre el print:flex en la cabecera (algunos navegadores ignoran el utility) */
+  .print\:flex {
+    display: flex !important;
+  }
+  .print\:block {
+    display: block !important;
   }
 
   /* Oculta elementos decorativos que no aportan al reporte */

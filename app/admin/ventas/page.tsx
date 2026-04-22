@@ -4,7 +4,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getSettings } from "@/lib/queries";
 import { AdminHeader } from "@/components/admin/AdminHeader";
 import type { Pedido, PedidoItem } from "@/types/database";
-import { VentasDashboard } from "./VentasDashboard";
+import { VentasDashboard, type ProductoCostEntry } from "./VentasDashboard";
 
 export const dynamic = "force-dynamic";
 
@@ -44,6 +44,18 @@ export default async function AdminVentasPage() {
     }
   }
 
+  // Productos con costo para calcular margen (opcional; columna existe desde migración 006)
+  const { data: productosCosto } = await supabase
+    .from("productos")
+    .select("nombre, precio_usd, costo_usd");
+  const productosCostoMap: Record<string, ProductoCostEntry> = {};
+  for (const p of (productosCosto ?? []) as any[]) {
+    productosCostoMap[p.nombre] = {
+      precio_usd: Number(p.precio_usd ?? 0),
+      costo_usd: Number(p.costo_usd ?? 0),
+    };
+  }
+
   return (
     <>
       <AdminHeader email={user?.email} />
@@ -69,6 +81,7 @@ export default async function AdminVentasPage() {
           <VentasDashboard
             pedidos={(pedidos ?? []) as Pedido[]}
             itemsByPedido={itemsByPedido}
+            productosCosto={productosCostoMap}
             businessName={settings.nombre_negocio}
           />
         </div>

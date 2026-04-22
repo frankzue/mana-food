@@ -7,7 +7,6 @@ import {
   DollarSign,
   Receipt,
   TrendingUp,
-  Truck,
   Printer,
   Download,
   CalendarDays,
@@ -17,11 +16,20 @@ import {
   Phone,
   Star,
   Undo2,
+  Wallet,
+  Heart,
+  FileDown,
 } from "lucide-react";
+
+export type ProductoCostEntry = {
+  precio_usd: number;
+  costo_usd: number;
+};
 
 type Props = {
   pedidos: Pedido[];
   itemsByPedido: Record<string, PedidoItem[]>;
+  productosCosto?: Record<string, ProductoCostEntry>;
   businessName: string;
 };
 
@@ -106,6 +114,7 @@ function formatDateShort(iso: string): string {
 const ESTADO_LABEL: Record<EstadoPedido, string> = {
   nuevo: "Nuevo",
   contactado: "Contactado",
+  pagado: "Pagado",
   completado: "Completado",
   cancelado: "Cancelado",
   devuelto: "Devuelto",
@@ -114,6 +123,7 @@ const ESTADO_LABEL: Record<EstadoPedido, string> = {
 export function VentasDashboard({
   pedidos,
   itemsByPedido,
+  productosCosto,
   businessName,
 }: Props) {
   const [range, setRange] = useState<RangeKey>("hoy");
@@ -139,6 +149,7 @@ export function VentasDashboard({
   const kpis = useMemo(() => {
     let ventas = 0;
     let envios = 0;
+    let propinas = 0;
     let totalBs = 0;
     let completados = 0;
     let cancelados = 0;
@@ -148,6 +159,7 @@ export function VentasDashboard({
     for (const p of filtrados) {
       ventas += Number(p.total_usd);
       envios += Number(p.envio_usd);
+      propinas += Number(p.propina_usd ?? 0);
       totalBs += Number(p.total_bs);
       if (p.estado === "completado") completados++;
       else if (p.estado === "cancelado") cancelados++;
@@ -167,6 +179,7 @@ export function VentasDashboard({
       ventas,
       ventasNetas,
       envios,
+      propinas,
       totalBs,
       pedidos: pedidos_,
       completados,
@@ -198,27 +211,86 @@ export function VentasDashboard({
     return arr;
   }, [filtrados, kpis.ventas]);
 
-  // Top productos
+  // Top productos con margen (si hay costos configurados)
   const topProductos = useMemo(() => {
     const map = new Map<
       string,
-      { nombre: string; cantidad: number; total: number }
+      {
+        nombre: string;
+        cantidad: number;
+        total: number;
+        costoTotal: number;
+        tieneCosto: boolean;
+      }
     >();
     for (const p of filtrados) {
       const items = itemsByPedido[p.id] ?? [];
       for (const it of items) {
         // Usamos solo el nombre "base" antes de " · " (modificadores)
         const base = it.producto_nombre.split(" · ")[0] ?? it.producto_nombre;
-        const curr = map.get(base) ?? { nombre: base, cantidad: 0, total: 0 };
+        const cost = productosCosto?.[base];
+        const curr = map.get(base) ?? {
+          nombre: base,
+          cantidad: 0,
+          total: 0,
+          costoTotal: 0,
+          tieneCosto: false,
+        };
         curr.cantidad += it.cantidad;
         curr.total += Number(it.subtotal_usd);
+        if (cost && cost.costo_usd > 0) {
+          curr.costoTotal += cost.costo_usd * it.cantidad;
+          curr.tieneCosto = true;
+        }
         map.set(base, curr);
       }
     }
-    const arr = Array.from(map.values());
+    const arr = Array.from(map.values()).map((p) => ({
+      ...p,
+      margenUsd: p.tieneCosto ? p.total - p.costoTotal : null,
+      margenPct:
+        p.tieneCosto && p.total > 0
+          ? ((p.total - p.costoTotal) / p.total) * 100
+          : null,
+    }));
     arr.sort((a, b) => b.cantidad - a.cantidad);
     return arr.slice(0, 10);
-  }, [filtrados, itemsByPedido]);
+  }, [filtrados, itemsByPedido, productosCosto]);
+
+  // Ganancia bruta total (si hay costos configurados)
+  const gananciaBruta = useMemo(() => {
+    let totalVentas = 0;
+    let totalCosto = 0;
+    let tieneAlgunCosto = false;
+    for (const p of filtrados) {
+      if (p.estado === "cancelado") continue;
+      const isRef = p.estado === "devuelto";
+      const refundUsd = isRef
+        ? p.devuelto_monto_usd != null
+          ? Number(p.devuelto_monto_usd)
+          : Number(p.total_usd)
+        : 0;
+      const netoPedido = Number(p.subtotal_usd) - refundUsd * 0; // no descontamos refund del subtotal para cálculo de margen
+      totalVentas += Number(p.subtotal_usd);
+      const items = itemsByPedido[p.id] ?? [];
+      for (const it of items) {
+        const base = it.producto_nombre.split(" · ")[0] ?? it.producto_nombre;
+        const cost = productosCosto?.[base];
+        if (cost && cost.costo_usd > 0) {
+          totalCosto += cost.costo_usd * it.cantidad;
+          tieneAlgunCosto = true;
+        }
+      }
+      void netoPedido;
+    }
+    if (!tieneAlgunCosto) return null;
+    return {
+      ventas: totalVentas,
+      costo: totalCosto,
+      ganancia: totalVentas - totalCosto,
+      margenPct: totalVentas > 0 ? ((totalVentas - totalCosto) / totalVentas) * 100 : 0,
+    };
+  }, [filtrados, itemsByPedido, productosCosto]);
 
   // Ventas por día (para el rango)
   const porDia = useMemo(() => {
@@ -256,6 +328,40 @@ export function VentasDashboard({
 
   function handlePrint() {
     if (typeof window !== "undefined") window.print();
+  }
+
+  /**
+   * Genera el reporte en una ventana nueva, autocontenida, con logo y
+   * disparo automático de imprimir (donde el usuario puede elegir "Guardar
+   * como PDF"). Es más robusto que window.print() de la página entera porque:
+   *   - No depende de que las reglas print: de Tailwind se apliquen en todos los navegadores.
+   *   - El layout es limpio y siempre cabe en A4/Letter.
+   *   - Funciona aunque estilos dinámicos / animaciones rompan el print del SPA.
+   */
+  function handleDownloadPdf() {
+    if (typeof window === "undefined" || filtrados.length === 0) return;
+    const html = buildReportHtml({
+      businessName,
+      rangoTexto,
+      kpis,
+      filtrados,
+      itemsByPedido,
+      topProductos,
+      gananciaBruta,
+    });
+
+    const win = window.open("", "_blank", "noopener,noreferrer,width=1024,height=768");
+    if (!win) {
+      // Si el popup está bloqueado, caemos al print normal.
+      alert(
+        "Permite ventanas emergentes para descargar el PDF, o usa el botón Imprimir."
+      );
+      window.print();
+      return;
+    }
+    win.document.open();
+    win.document.write(html);
+    win.document.close();
   }
 
   function handleExportCsv() {
@@ -324,15 +430,22 @@ export function VentasDashboard({
 
   return (
     <div className="space-y-5 print:space-y-3">
-      {/* Cabecera solo para imprimir */}
-      <div className="hidden print:block pb-3 border-b border-black/20">
-        <h1 className="font-display text-2xl font-black">
-          {businessName} — Reporte de ventas
-        </h1>
-        <p className="text-sm">
-          {rangoTexto} · Generado el{" "}
-          {new Date().toLocaleString("es-VE")}
-        </p>
+      {/* Cabecera solo para imprimir (con logo) */}
+      <div className="hidden print:flex items-center gap-4 pb-3 border-b-2 border-mana-red mb-3">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/logo.png"
+          alt={businessName}
+          className="h-14 w-14 object-contain"
+        />
+        <div className="flex-1">
+          <h1 className="font-display text-2xl font-black">
+            {businessName} — Reporte de ventas
+          </h1>
+          <p className="text-sm">
+            {rangoTexto} · Generado el {new Date().toLocaleString("es-VE")}
+          </p>
+        </div>
       </div>
 
       {/* Filtros (ocultos al imprimir) */}
@@ -405,11 +518,20 @@ export function VentasDashboard({
               <Download className="h-3.5 w-3.5" /> Exportar CSV
             </button>
             <button
+              onClick={handleDownloadPdf}
+              disabled={filtrados.length === 0}
+              className="inline-flex items-center gap-1.5 rounded-full bg-mana-red text-white px-3 py-1.5 text-xs font-semibold ring-1 ring-mana-red hover:brightness-95 transition disabled:opacity-50"
+              title="Abre una ventana con el reporte listo para guardar como PDF"
+            >
+              <FileDown className="h-3.5 w-3.5" /> Descargar PDF
+            </button>
+            <button
               onClick={handlePrint}
               disabled={filtrados.length === 0}
               className="inline-flex items-center gap-1.5 rounded-full bg-mana-yellow text-mana-ink px-3 py-1.5 text-xs font-semibold ring-1 ring-mana-yellow hover:brightness-95 transition disabled:opacity-50"
+              title="Imprime esta página tal cual"
             >
-              <Printer className="h-3.5 w-3.5" /> Imprimir / PDF
+              <Printer className="h-3.5 w-3.5" /> Imprimir
             </button>
           </div>
         </div>
@@ -446,25 +568,55 @@ export function VentasDashboard({
           sub="Por pedido (bruto)"
           tone="yellow"
         />
-        <Kpi
-          icon={<Undo2 className="h-5 w-5" />}
-          label="Devoluciones"
-          value={formatUSD(kpis.devolucionesUsd)}
-          sub={`${kpis.devueltos} pedidos${
-            kpis.ventas > 0
-              ? ` · ${((kpis.devolucionesUsd / kpis.ventas) * 100).toFixed(
-                  1
-                )}% de ventas`
-              : ""
-          }`}
-          tone="ink"
-        />
+        {kpis.propinas > 0 ? (
+          <Kpi
+            icon={<Heart className="h-5 w-5" />}
+            label="Propinas"
+            value={formatUSD(kpis.propinas)}
+            sub={
+              kpis.pedidos > 0
+                ? `${((kpis.propinas / Math.max(1, kpis.ventas)) * 100).toFixed(
+                    1
+                  )}% de ventas`
+                : "Aún sin propinas"
+            }
+            tone="ink"
+          />
+        ) : (
+          <Kpi
+            icon={<Undo2 className="h-5 w-5" />}
+            label="Devoluciones"
+            value={formatUSD(kpis.devolucionesUsd)}
+            sub={`${kpis.devueltos} pedidos${
+              kpis.ventas > 0
+                ? ` · ${((kpis.devolucionesUsd / kpis.ventas) * 100).toFixed(
+                    1
+                  )}% de ventas`
+                : ""
+            }`}
+            tone="ink"
+          />
+        )}
       </section>
 
-      {kpis.envios > 0 && (
+      {(kpis.envios > 0 || kpis.propinas > 0) && (
         <p className="text-[11px] text-mana-muted -mt-2 print:hidden">
-          De las ventas netas, {formatUSD(kpis.envios)} corresponden a envíos
-          cobrados.
+          {kpis.envios > 0 && (
+            <>
+              De las ventas netas, {formatUSD(kpis.envios)} corresponden a
+              envíos cobrados.
+            </>
+          )}
+          {kpis.propinas > 0 && (
+            <>
+              {kpis.envios > 0 ? " " : ""}
+              Propinas recibidas:{" "}
+              <strong className="text-mana-red">
+                {formatUSD(kpis.propinas)}
+              </strong>
+              .
+            </>
+          )}
         </p>
       )}
 
@@ -561,15 +713,65 @@ export function VentasDashboard({
                         × {p.cantidad}
                       </span>
                     </span>
-                    <span className="text-mana-ink font-semibold shrink-0">
-                      {formatUSD(p.total)}
-                    </span>
+                    <div className="text-right shrink-0">
+                      <div className="text-mana-ink font-semibold">
+                        {formatUSD(p.total)}
+                      </div>
+                      {p.margenPct !== null && (
+                        <div
+                          className={[
+                            "text-[10px] font-semibold",
+                            p.margenPct >= 40
+                              ? "text-mana-success"
+                              : p.margenPct >= 20
+                              ? "text-mana-yellow"
+                              : "text-orange-700",
+                          ].join(" ")}
+                        >
+                          Margen {p.margenPct.toFixed(0)}%
+                        </div>
+                      )}
+                    </div>
                   </li>
                 ))}
                 {topProductos.length === 0 && (
                   <li className="text-sm text-mana-muted">Sin datos</li>
                 )}
               </ul>
+              {!productosCosto ||
+              Object.values(productosCosto ?? {}).every(
+                (p) => p.costo_usd === 0
+              ) ? (
+                <p className="mt-3 text-[11px] text-mana-muted italic">
+                  💡 Agrega costos por producto en la BD (columna{" "}
+                  <code className="font-mono">productos.costo_usd</code>) para
+                  ver el margen real.
+                </p>
+              ) : gananciaBruta ? (
+                <div className="mt-3 rounded-xl bg-mana-success/10 ring-1 ring-mana-success/20 p-3 text-xs">
+                  <div className="flex justify-between">
+                    <span className="text-mana-muted">Ventas de menú</span>
+                    <span className="font-semibold">
+                      {formatUSD(gananciaBruta.ventas)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-mana-muted">Costo mercancía</span>
+                    <span className="font-semibold">
+                      − {formatUSD(gananciaBruta.costo)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between pt-1 mt-1 border-t border-mana-success/20">
+                    <span className="font-bold text-mana-success">
+                      Ganancia bruta
+                    </span>
+                    <span className="font-bold text-mana-success">
+                      {formatUSD(gananciaBruta.ganancia)} (
+                      {gananciaBruta.margenPct.toFixed(0)}%)
+                    </span>
+                  </div>
+                </div>
+              ) : null}
             </div>
           </section>
 
@@ -656,6 +858,8 @@ export function VentasDashboard({
                             "inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold",
                             p.estado === "completado"
                               ? "bg-mana-success/15 text-mana-success"
+                              : p.estado === "pagado"
+                              ? "bg-blue-100 text-blue-700"
                               : p.estado === "cancelado"
                               ? "bg-red-100 text-red-700"
                               : p.estado === "devuelto"
@@ -818,4 +1022,437 @@ function StatusCard({
       </div>
     </div>
   );
+}
+
+// =========================================================
+// PDF report builder (ventana nueva autocontenida)
+// =========================================================
+function esc(s: string): string {
+  return String(s ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function fmtUsd(n: number): string {
+  return `$${n.toFixed(2)}`;
+}
+
+type BuildReportParams = {
+  businessName: string;
+  rangoTexto: string;
+  kpis: {
+    ventas: number;
+    ventasNetas: number;
+    envios: number;
+    propinas: number;
+    totalBs: number;
+    pedidos: number;
+    completados: number;
+    cancelados: number;
+    devueltos: number;
+    devolucionesUsd: number;
+    enCurso: number;
+    ticketPromedio: number;
+  };
+  filtrados: Pedido[];
+  itemsByPedido: Record<string, PedidoItem[]>;
+  topProductos: Array<{
+    nombre: string;
+    cantidad: number;
+    total: number;
+    margenPct: number | null;
+  }>;
+  gananciaBruta: {
+    ventas: number;
+    costo: number;
+    ganancia: number;
+    margenPct: number;
+  } | null;
+};
+
+function buildReportHtml({
+  businessName,
+  rangoTexto,
+  kpis,
+  filtrados,
+  itemsByPedido,
+  topProductos,
+  gananciaBruta,
+}: BuildReportParams): string {
+  const rowsHtml = filtrados
+    .map((p) => {
+      const items = itemsByPedido[p.id] ?? [];
+      const prods = items
+        .map((i) => `${i.cantidad}× ${esc(i.producto_nombre)}`)
+        .join("<br/>");
+      const isRefunded = p.estado === "devuelto";
+      const refundAmount = isRefunded
+        ? p.devuelto_monto_usd != null
+          ? Number(p.devuelto_monto_usd)
+          : Number(p.total_usd)
+        : 0;
+      const totalCell = isRefunded
+        ? `<span class="line-through text-muted">${fmtUsd(
+            Number(p.total_usd)
+          )}</span><br/><span class="refund">− ${fmtUsd(
+            refundAmount
+          )}</span>`
+        : fmtUsd(Number(p.total_usd));
+      return `
+        <tr>
+          <td>#${String(p.numero).padStart(4, "0")}</td>
+          <td>${new Date(p.created_at).toLocaleString("es-VE", {
+            day: "2-digit",
+            month: "2-digit",
+            year: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit",
+          })}</td>
+          <td>
+            <div class="strong">${esc(p.cliente_nombre)}</div>
+            <div class="muted small">${esc(p.cliente_telefono)}</div>
+          </td>
+          <td class="small">${prods || "—"}</td>
+          <td>${esc(p.metodo_pago)}</td>
+          <td><span class="badge badge-${p.estado}">${p.estado}</span>${
+        isRefunded && p.motivo_devolucion
+          ? `<div class="muted small">${esc(p.motivo_devolucion)}</div>`
+          : ""
+      }</td>
+          <td class="right strong">${totalCell}</td>
+        </tr>
+      `;
+    })
+    .join("");
+
+  const topHtml = topProductos
+    .map(
+      (p, idx) => `
+      <li>
+        <span class="rank">#${idx + 1}</span>
+        <span class="prod-name">${esc(p.nombre)} <small>× ${p.cantidad}</small></span>
+        <span class="prod-total">
+          ${fmtUsd(p.total)}
+          ${
+            p.margenPct !== null
+              ? `<small class="margin ${
+                  p.margenPct >= 40
+                    ? "m-good"
+                    : p.margenPct >= 20
+                    ? "m-ok"
+                    : "m-bad"
+                }">Margen ${p.margenPct.toFixed(0)}%</small>`
+              : ""
+          }
+        </span>
+      </li>
+    `
+    )
+    .join("");
+
+  const margenHtml = gananciaBruta
+    ? `
+    <div class="margen-box">
+      <div class="row"><span>Ventas de menú</span><span>${fmtUsd(
+        gananciaBruta.ventas
+      )}</span></div>
+      <div class="row"><span>Costo mercancía</span><span>− ${fmtUsd(
+        gananciaBruta.costo
+      )}</span></div>
+      <div class="row total"><span>Ganancia bruta</span><span>${fmtUsd(
+        gananciaBruta.ganancia
+      )} (${gananciaBruta.margenPct.toFixed(0)}%)</span></div>
+    </div>
+  `
+    : "";
+
+  return `<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <title>${esc(businessName)} — Reporte de ventas</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+      color: #1a1a1a;
+      background: #fff;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    body { padding: 24px; }
+    @page { margin: 14mm; size: A4; }
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      border-bottom: 2px solid #e11d48;
+      padding-bottom: 14px;
+      margin-bottom: 20px;
+    }
+    header .brand { display: flex; align-items: center; gap: 12px; }
+    header img.logo { height: 56px; width: 56px; object-fit: contain; }
+    header h1 { margin: 0; font-size: 22px; font-weight: 900; color: #1a1a1a; }
+    header .meta { font-size: 12px; color: #666; text-align: right; }
+    h2 {
+      font-size: 14px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: #666;
+      margin: 18px 0 8px;
+      border-bottom: 1px solid #eee;
+      padding-bottom: 4px;
+    }
+    .kpis {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin-bottom: 18px;
+    }
+    .kpi {
+      border: 1px solid #e5e5e5;
+      border-radius: 10px;
+      padding: 10px 12px;
+    }
+    .kpi .label { font-size: 10px; text-transform: uppercase; color: #888; font-weight: 700; letter-spacing: 0.04em; }
+    .kpi .value { font-size: 20px; font-weight: 900; color: #111; margin-top: 2px; }
+    .kpi .sub { font-size: 10px; color: #888; margin-top: 2px; }
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+    .box { border: 1px solid #e5e5e5; border-radius: 10px; padding: 12px; }
+    ul.top { list-style: none; margin: 0; padding: 0; }
+    ul.top li {
+      display: grid;
+      grid-template-columns: 24px 1fr auto;
+      align-items: center;
+      gap: 8px;
+      padding: 4px 0;
+      border-bottom: 1px dashed #eee;
+      font-size: 11px;
+    }
+    ul.top li:last-child { border-bottom: 0; }
+    ul.top .rank { color: #e11d48; font-weight: 700; }
+    ul.top .prod-name small { color: #888; }
+    ul.top .prod-total { text-align: right; font-weight: 700; }
+    ul.top .margin { display: block; font-size: 9px; font-weight: 700; }
+    .m-good { color: #16a34a; }
+    .m-ok { color: #ca8a04; }
+    .m-bad { color: #ea580c; }
+    .margen-box { margin-top: 10px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 10px; font-size: 11px; }
+    .margen-box .row { display: flex; justify-content: space-between; margin-bottom: 2px; }
+    .margen-box .row.total { border-top: 1px solid #bbf7d0; padding-top: 4px; margin-top: 4px; font-weight: 800; color: #15803d; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 10.5px;
+      margin-top: 6px;
+    }
+    thead th {
+      background: #111;
+      color: #fff;
+      text-align: left;
+      padding: 6px 8px;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    tbody td {
+      padding: 6px 8px;
+      border-bottom: 1px solid #eee;
+      vertical-align: top;
+    }
+    tbody tr:nth-child(even) td { background: #fafafa; }
+    .right { text-align: right; }
+    .strong { font-weight: 700; }
+    .muted { color: #888; }
+    .small { font-size: 10px; }
+    .line-through { text-decoration: line-through; }
+    .refund { color: #ea580c; font-weight: 700; }
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 9px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+    .badge-nuevo { background: #fef3c7; color: #78350f; }
+    .badge-contactado { background: #fef9c3; color: #713f12; }
+    .badge-pagado { background: #dbeafe; color: #1e40af; }
+    .badge-completado { background: #dcfce7; color: #166534; }
+    .badge-cancelado { background: #fee2e2; color: #991b1b; }
+    .badge-devuelto { background: #ffedd5; color: #9a3412; }
+    tfoot td {
+      background: #f5f5f5;
+      font-weight: 700;
+      padding: 6px 8px;
+      border-top: 2px solid #111;
+    }
+    footer {
+      margin-top: 20px;
+      padding-top: 10px;
+      border-top: 1px solid #eee;
+      font-size: 10px;
+      color: #888;
+      text-align: center;
+    }
+    .toolbar {
+      position: fixed;
+      top: 12px;
+      right: 12px;
+      display: flex;
+      gap: 8px;
+      z-index: 1000;
+    }
+    .toolbar button {
+      background: #e11d48;
+      color: #fff;
+      border: 0;
+      border-radius: 999px;
+      padding: 10px 16px;
+      font-weight: 700;
+      font-size: 13px;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    .toolbar button.secondary {
+      background: #fff;
+      color: #1a1a1a;
+      border: 1px solid #ccc;
+    }
+    @media print {
+      .toolbar { display: none !important; }
+      body { padding: 0; }
+    }
+  </style>
+</head>
+<body>
+  <div class="toolbar">
+    <button class="secondary" onclick="window.close()">Cerrar</button>
+    <button onclick="window.print()">Imprimir / Guardar PDF</button>
+  </div>
+
+  <header>
+    <div class="brand">
+      <img src="/logo.png" alt="${esc(businessName)}" class="logo"
+           onerror="this.style.display='none'" />
+      <div>
+        <h1>${esc(businessName)}</h1>
+        <div class="muted small">Reporte de ventas</div>
+      </div>
+    </div>
+    <div class="meta">
+      <div class="strong">${esc(rangoTexto)}</div>
+      <div>Generado: ${new Date().toLocaleString("es-VE")}</div>
+    </div>
+  </header>
+
+  <h2>Resumen</h2>
+  <div class="kpis">
+    <div class="kpi">
+      <div class="label">Ventas netas</div>
+      <div class="value">${fmtUsd(kpis.ventasNetas)}</div>
+      <div class="sub">Brutas ${fmtUsd(kpis.ventas)}${
+    kpis.devolucionesUsd > 0
+      ? ` − devoluciones ${fmtUsd(kpis.devolucionesUsd)}`
+      : ""
+  }</div>
+    </div>
+    <div class="kpi">
+      <div class="label">Pedidos</div>
+      <div class="value">${kpis.pedidos}</div>
+      <div class="sub">${kpis.completados} completados · ${kpis.cancelados} cancelados${
+    kpis.devueltos ? ` · ${kpis.devueltos} devueltos` : ""
+  }</div>
+    </div>
+    <div class="kpi">
+      <div class="label">Ticket promedio</div>
+      <div class="value">${fmtUsd(kpis.ticketPromedio)}</div>
+      <div class="sub">Por pedido</div>
+    </div>
+    <div class="kpi">
+      <div class="label">Propinas</div>
+      <div class="value">${fmtUsd(kpis.propinas)}</div>
+      <div class="sub">Total recibido</div>
+    </div>
+  </div>
+
+  <div class="two-col">
+    <div class="box">
+      <h2 style="margin-top:0; border:0; padding:0;">Productos más vendidos</h2>
+      <ul class="top">${topHtml || '<li><span class="muted">Sin datos</span></li>'}</ul>
+      ${margenHtml}
+    </div>
+    <div class="box">
+      <h2 style="margin-top:0; border:0; padding:0;">Desglose por estado</h2>
+      <ul class="top">
+        <li><span class="rank">✓</span><span class="prod-name">Completados</span><span class="prod-total">${
+          kpis.completados
+        }</span></li>
+        <li><span class="rank">⏳</span><span class="prod-name">En curso</span><span class="prod-total">${
+          kpis.enCurso
+        }</span></li>
+        <li><span class="rank">↩</span><span class="prod-name">Devueltos</span><span class="prod-total">${
+          kpis.devueltos
+        } · ${fmtUsd(kpis.devolucionesUsd)}</span></li>
+        <li><span class="rank">✗</span><span class="prod-name">Cancelados</span><span class="prod-total">${
+          kpis.cancelados
+        }</span></li>
+      </ul>
+    </div>
+  </div>
+
+  <h2>Pedidos (${filtrados.length})</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Fecha</th>
+        <th>Cliente</th>
+        <th>Productos</th>
+        <th>Pago</th>
+        <th>Estado</th>
+        <th class="right">Total</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${rowsHtml || '<tr><td colspan="7" class="muted">Sin pedidos en el rango</td></tr>'}
+    </tbody>
+    <tfoot>
+      <tr>
+        <td colspan="6" class="right">Ventas brutas</td>
+        <td class="right">${fmtUsd(kpis.ventas)}</td>
+      </tr>
+      ${
+        kpis.devolucionesUsd > 0
+          ? `<tr><td colspan="6" class="right refund">− Devoluciones</td><td class="right refund">− ${fmtUsd(
+              kpis.devolucionesUsd
+            )}</td></tr>`
+          : ""
+      }
+      <tr>
+        <td colspan="6" class="right">Ventas netas</td>
+        <td class="right">${fmtUsd(kpis.ventasNetas)}</td>
+      </tr>
+    </tfoot>
+  </table>
+
+  <footer>
+    ${esc(businessName)} · Reporte generado desde el panel de administración
+  </footer>
+
+  <script>
+    // Auto-print al cargar (un pequeño delay para que la imagen del logo cargue).
+    window.addEventListener('load', function() {
+      setTimeout(function() { window.print(); }, 350);
+    });
+  </script>
+</body>
+</html>`;
 }

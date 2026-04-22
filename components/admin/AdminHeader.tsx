@@ -8,6 +8,8 @@ import {
   Settings,
   ListOrdered,
   LineChart,
+  Users,
+  Wallet,
   type LucideIcon,
 } from "lucide-react";
 
@@ -34,6 +36,18 @@ const NAV: NavItem[] = [
     label: "Ventas",
     icon: LineChart,
     activePrefix: "/admin/ventas",
+  },
+  {
+    href: "/admin/caja",
+    label: "Caja",
+    icon: Wallet,
+    activePrefix: "/admin/caja",
+  },
+  {
+    href: "/admin/clientes",
+    label: "Clientes",
+    icon: Users,
+    activePrefix: "/admin/clientes",
   },
   {
     href: "/admin/settings",

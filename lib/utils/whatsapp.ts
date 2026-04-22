@@ -76,6 +76,10 @@ export function buildWhatsAppMessage(
   lines.push(
     `Envío (${pedido.zona_nombre}): ${formatUSD(Number(pedido.envio_usd))}`
   );
+  const propina = Number(pedido.propina_usd ?? 0);
+  if (propina > 0) {
+    lines.push(`Propina: ${formatUSD(propina)} 🙌`);
+  }
   lines.push(
     `*Total: ${formatUSD(Number(pedido.total_usd))} · ${formatBs(
       Number(pedido.total_bs)

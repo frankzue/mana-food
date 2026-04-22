@@ -13,6 +13,7 @@ export type Producto = {
   nombre: string;
   descripcion: string | null;
   precio_usd: number;
+  costo_usd?: number; // Opcional: existe desde migración 006 (para margen)
   imagen_url: string | null;
   disponible: boolean;
   orden: number;
@@ -40,6 +41,7 @@ export type Configuracion = {
 export type EstadoPedido =
   | "nuevo"
   | "contactado"
+  | "pagado"
   | "completado"
   | "cancelado"
   | "devuelto";
@@ -55,6 +57,7 @@ export type Pedido = {
   subtotal_usd: number;
   iva_usd: number;
   envio_usd: number;
+  propina_usd?: number; // Opcional: existe desde la migración 006
   total_usd: number;
   tasa_bs: number;
   total_bs: number;
@@ -65,6 +68,29 @@ export type Pedido = {
   devuelto_at?: string | null;
   devuelto_monto_usd?: number | null;
   motivo_devolucion?: string | null;
+};
+
+// Cierre de caja diario (migración 006)
+export type CierreCaja = {
+  id: string;
+  fecha: string; // YYYY-MM-DD
+  cerrado_at: string;
+  cerrado_por: string | null;
+  ventas_brutas_usd: number;
+  devoluciones_usd: number;
+  ventas_netas_usd: number;
+  propinas_usd: number;
+  envios_usd: number;
+  pedidos_count: number;
+  completados_count: number;
+  devueltos_count: number;
+  cancelados_count: number;
+  desglose_metodo: Record<string, { total: number; count: number }>;
+  efectivo_usd_contado: number | null;
+  efectivo_bs_contado: number | null;
+  tasa_bs: number | null;
+  diferencia_usd: number | null;
+  notas: string | null;
 };
 
 export type PedidoItem = {

@@ -14,6 +14,7 @@ import {
   Bike,
   Store,
   StickyNote,
+  Heart,
 } from "lucide-react";
 import Link from "next/link";
 import { summarizeModifiers } from "@/lib/modifiers";
@@ -102,6 +103,12 @@ export function CheckoutForm({ zonas, tasaBs, ivaRate, demoMode }: Props) {
     notas: "",
   });
 
+  // Propina: estrategia = "none" | "5" | "10" | "15" | "custom"
+  const [tipKind, setTipKind] = useState<"none" | "5" | "10" | "15" | "custom">(
+    "none"
+  );
+  const [tipCustom, setTipCustom] = useState<string>("");
+
   const [error, setError] = useState<string | null>(null);
   const [successInfo, setSuccessInfo] = useState<{
     numero: number;
@@ -126,6 +133,20 @@ export function CheckoutForm({ zonas, tasaBs, ivaRate, demoMode }: Props) {
   const envio =
     form.modalidad === "delivery" ? zonaSeleccionada?.costo_envio_usd ?? 0 : 0;
 
+  const subtotalForTip = useMemo(
+    () => items.reduce((s, i) => s + i.precio_unit_usd * i.cantidad, 0),
+    [items]
+  );
+  const propina = useMemo(() => {
+    if (tipKind === "none") return 0;
+    if (tipKind === "custom") {
+      const n = Number(tipCustom.replace(",", "."));
+      return isFinite(n) && n > 0 ? Math.min(1000, n) : 0;
+    }
+    const pct = Number(tipKind) / 100;
+    return Math.round(subtotalForTip * pct * 100) / 100;
+  }, [tipKind, tipCustom, subtotalForTip]);
+
   const totales = useMemo(
     () =>
       calcularTotales({
@@ -138,8 +159,9 @@ export function CheckoutForm({ zonas, tasaBs, ivaRate, demoMode }: Props) {
         envio_usd: envio,
         tasa_bs: tasaBs,
         iva_rate: ivaRate,
+        propina_usd: propina,
       }),
-    [items, envio, tasaBs, ivaRate]
+    [items, envio, tasaBs, ivaRate, propina]
   );
 
   const canSubmit =
@@ -181,6 +203,7 @@ export function CheckoutForm({ zonas, tasaBs, ivaRate, demoMode }: Props) {
             modalidad: form.modalidad,
             zona_id: form.modalidad === "delivery" ? form.zona_id : null,
             notas: form.notas.trim() || null,
+            propina_usd: propina,
             items: items.map((i) => ({
               producto_id: i.producto_id,
               cantidad: i.cantidad,
@@ -439,6 +462,67 @@ export function CheckoutForm({ zonas, tasaBs, ivaRate, demoMode }: Props) {
           </div>
 
           <div>
+            <label className="block text-sm font-semibold text-mana-ink mb-2">
+              <Heart className="h-4 w-4 text-mana-red inline -mt-0.5 mr-1" />
+              ¿Quieres agregar propina?{" "}
+              <span className="text-mana-muted font-normal">(opcional)</span>
+            </label>
+            <div className="grid grid-cols-5 gap-1.5">
+              {(
+                [
+                  { id: "none", label: "No" },
+                  { id: "5", label: "5%" },
+                  { id: "10", label: "10%" },
+                  { id: "15", label: "15%" },
+                  { id: "custom", label: "Otro" },
+                ] as const
+              ).map((t) => {
+                const selected = tipKind === t.id;
+                return (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => setTipKind(t.id)}
+                    className={[
+                      "rounded-xl px-2 py-2 text-sm font-semibold transition-all ring-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mana-yellow",
+                      selected
+                        ? "bg-mana-red text-white ring-mana-red shadow-mana-soft"
+                        : "bg-white text-mana-ink ring-black/10 hover:ring-mana-red/40",
+                    ].join(" ")}
+                  >
+                    {t.label}
+                  </button>
+                );
+              })}
+            </div>
+            {tipKind === "custom" && (
+              <div className="mt-2">
+                <label
+                  htmlFor="ck-tip"
+                  className="block text-xs font-semibold text-mana-muted mb-1"
+                >
+                  Monto en USD
+                </label>
+                <input
+                  id="ck-tip"
+                  type="text"
+                  inputMode="decimal"
+                  value={tipCustom}
+                  onChange={(e) => setTipCustom(e.target.value)}
+                  placeholder="1.00"
+                  className="input-mana"
+                />
+              </div>
+            )}
+            {propina > 0 && (
+              <p className="text-[11px] text-mana-muted mt-1">
+                Se sumará {formatUSD(propina)} al total. Gracias por apoyar al
+                equipo.
+              </p>
+            )}
+          </div>
+
+          <div>
             <label
               htmlFor="ck-notas"
               className="block text-sm font-semibold text-mana-ink mb-1.5"
@@ -558,6 +642,14 @@ export function CheckoutForm({ zonas, tasaBs, ivaRate, demoMode }: Props) {
                   : "—"}
               </span>
             </div>
+            {propina > 0 && (
+              <div className="flex justify-between">
+                <span className="text-mana-muted inline-flex items-center gap-1">
+                  <Heart className="h-3 w-3 text-mana-red" /> Propina
+                </span>
+                <span className="font-semibold">{formatUSD(propina)}</span>
+              </div>
+            )}
             <p className="text-[11px] text-mana-muted italic pt-0.5">
               * Precios con IVA incluido.
             </p>
