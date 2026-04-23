@@ -110,7 +110,8 @@ export function PromoSlider() {
   }, []);
 
   return (
-    <section className="relative bg-mana-cream pt-3 pb-4">
+    <section className="relative bg-mana-cream pt-3 pb-3 lg:pt-4 lg:pb-4">
+      {/* ====== MOBILE/TABLET (<lg): carrusel scroll-snap ====== */}
       <div
         ref={scrollerRef}
         onMouseEnter={() => setPaused(true)}
@@ -119,7 +120,7 @@ export function PromoSlider() {
         onTouchEnd={() => setPaused(false)}
         onFocusCapture={() => setPaused(true)}
         onBlurCapture={() => setPaused(false)}
-        className="flex gap-3 overflow-x-auto snap-x snap-mandatory scroll-smooth px-4 pb-1 [&::-webkit-scrollbar]:hidden"
+        className="lg:hidden flex gap-3 overflow-x-auto snap-x snap-mandatory scroll-smooth px-4 pb-1 [&::-webkit-scrollbar]:hidden"
         style={{ scrollbarWidth: "none" }}
       >
         {SLIDES.map((s, i) => (
@@ -127,7 +128,7 @@ export function PromoSlider() {
             key={s.id}
             href={s.href ?? "#"}
             data-idx={i}
-            className={`snap-center shrink-0 w-[92%] sm:w-[85%] md:w-[70%] lg:w-[55%] rounded-3xl overflow-hidden relative bg-gradient-to-br ${s.bg} text-white shadow-mana cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mana-yellow`}
+            className={`snap-center shrink-0 w-[92%] sm:w-[85%] md:w-[70%] rounded-3xl overflow-hidden relative bg-gradient-to-br ${s.bg} text-white shadow-mana cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mana-yellow`}
           >
             <div className="flex items-center gap-3 p-5 sm:p-6 min-h-[170px] sm:min-h-[200px]">
               <div className="flex-1 min-w-0">
@@ -159,7 +160,6 @@ export function PromoSlider() {
               </motion.div>
             </div>
 
-            {/* Patrón sutil */}
             <div
               className="absolute inset-0 opacity-[0.08] pointer-events-none"
               style={{
@@ -171,8 +171,8 @@ export function PromoSlider() {
         ))}
       </div>
 
-      {/* Dots */}
-      <div className="flex items-center justify-center gap-1.5 mt-3">
+      {/* Dots sólo en mobile */}
+      <div className="lg:hidden flex items-center justify-center gap-1.5 mt-3">
         {SLIDES.map((_, i) => (
           <span
             key={i}
@@ -183,6 +183,82 @@ export function PromoSlider() {
             }`}
           />
         ))}
+      </div>
+
+      {/* ====== DESKTOP (lg+): dos promos HERO grandes lado a lado
+              con altura fija compacta. Se muestran siempre las 2 primeras
+              (LA FAVORITA + NOVEDAD) y a la derecha un pequeño sidebar
+              con accesos directos (envío + horario) para aprovechar el
+              ancho sin hacer los banners gigantes. ====== */}
+      <div className="hidden lg:block container">
+        <div className="grid grid-cols-12 gap-3">
+          {SLIDES.slice(0, 2).map((s) => (
+            <a
+              key={s.id}
+              href={s.href ?? "#"}
+              className={`col-span-5 rounded-2xl overflow-hidden relative bg-gradient-to-br ${s.bg} text-white shadow-mana-soft hover:shadow-mana transition-all hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mana-yellow`}
+            >
+              <div className="flex items-center gap-4 px-5 py-4 min-h-[120px]">
+                <div className="flex-1 min-w-0">
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-black/55 backdrop-blur-sm ring-1 ring-white/20 px-2 py-0.5 text-[10px] font-black text-white tracking-[0.12em]">
+                    <span className="text-mana-yellow">{s.icon}</span>
+                    {s.badge}
+                  </span>
+                  <h3 className="font-display text-xl font-black leading-tight mt-1.5 truncate">
+                    {s.title}
+                  </h3>
+                  <p className="text-[12px] text-white/80 mt-1 line-clamp-1">
+                    {s.subtitle}
+                  </p>
+                  <span className="inline-flex items-center gap-1 mt-2 rounded-full bg-white text-mana-red px-3 py-1 text-[11px] font-bold shadow-mana-soft">
+                    <Zap className="h-3 w-3" /> {s.cta}
+                  </span>
+                </div>
+                <motion.div
+                  className="text-5xl shrink-0 drop-shadow-[0_8px_16px_rgba(0,0,0,0.35)]"
+                  animate={{ rotate: [0, -6, 6, 0], y: [0, -3, 0] }}
+                  transition={{
+                    duration: 4,
+                    repeat: Infinity,
+                    ease: "easeInOut",
+                  }}
+                >
+                  {s.emoji}
+                </motion.div>
+              </div>
+              <div
+                className="absolute inset-0 opacity-[0.08] pointer-events-none"
+                style={{
+                  backgroundImage:
+                    "radial-gradient(circle at 20% 100%, #FFC72C 0%, transparent 45%)",
+                }}
+              />
+            </a>
+          ))}
+
+          {/* Sidebar de accesos (ENVÍO + HORARIO) */}
+          <div className="col-span-2 grid grid-rows-2 gap-3">
+            {SLIDES.slice(2).map((s) => (
+              <a
+                key={s.id}
+                href={s.href ?? "#"}
+                className={`rounded-2xl overflow-hidden relative bg-gradient-to-br ${s.bg} text-white shadow-mana-soft hover:shadow-mana transition-all hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mana-yellow flex items-center gap-2 px-3 py-2`}
+              >
+                <div className="text-2xl shrink-0 drop-shadow-[0_4px_8px_rgba(0,0,0,0.35)]">
+                  {s.emoji}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[9.5px] font-black uppercase tracking-[0.1em] text-mana-yellow leading-none">
+                    {s.badge}
+                  </p>
+                  <p className="text-[12px] font-bold leading-tight mt-0.5 line-clamp-2">
+                    {s.title}
+                  </p>
+                </div>
+              </a>
+            ))}
+          </div>
+        </div>
       </div>
     </section>
   );

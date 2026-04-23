@@ -77,7 +77,9 @@ export function MenuGrid({
               </div>
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
+            {/* Grid denso en desktop: hasta 5 columnas a partir de lg y 6 en 2xl.
+                En mobile se mantienen 2 columnas que es lo óptimo para tocar. */}
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 2xl:grid-cols-6 gap-3 lg:gap-4">
               {items.map((p) => (
                 <ProductCardFloating
                   key={p.id}

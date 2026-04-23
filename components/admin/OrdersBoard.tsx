@@ -68,6 +68,10 @@ export function OrdersBoard({
     setPedidos(initialPedidos);
   }, [initialPedidos]);
 
+  // Kanban sólo se ofrece en escritorio: en móvil la grilla horizontal es
+  // incómoda y el usuario pidió explícitamente no tenerlo en mobile.
+  const [isDesktop, setIsDesktop] = useState(false);
+
   useEffect(() => {
     if (typeof document !== "undefined") {
       originalTitleRef.current = document.title;
@@ -81,6 +85,13 @@ export function OrdersBoard({
       if (saved === "kanban" || saved === "list") setView(saved);
     } catch {
       // ignore
+    }
+    if (typeof window !== "undefined") {
+      const mq = window.matchMedia("(min-width: 1024px)");
+      setIsDesktop(mq.matches);
+      const handler = (e: MediaQueryListEvent) => setIsDesktop(e.matches);
+      mq.addEventListener("change", handler);
+      return () => mq.removeEventListener("change", handler);
     }
   }, []);
 
@@ -272,11 +283,12 @@ export function OrdersBoard({
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
-          {/* Toggle Lista / Kanban */}
-          <div className="inline-flex rounded-full bg-white ring-1 ring-black/10 p-0.5 shadow-sm">
+          {/* Toggle Lista / Kanban — sólo en escritorio (lg+).
+              En móvil forzamos Lista porque el Kanban requiere ancho. */}
+          <div className="hidden lg:inline-flex rounded-full bg-white ring-1 ring-black/10 p-0.5 shadow-sm">
             <button
               onClick={() => toggleView("list")}
-              className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold transition ${
+              className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold transition ${
                 view === "list"
                   ? "bg-mana-ink text-white"
                   : "text-mana-ink hover:bg-mana-cream"
@@ -285,11 +297,11 @@ export function OrdersBoard({
               aria-pressed={view === "list"}
             >
               <LayoutGrid className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Lista</span>
+              Lista
             </button>
             <button
               onClick={() => toggleView("kanban")}
-              className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold transition ${
+              className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold transition ${
                 view === "kanban"
                   ? "bg-mana-ink text-white"
                   : "text-mana-ink hover:bg-mana-cream"
@@ -298,7 +310,7 @@ export function OrdersBoard({
               aria-pressed={view === "kanban"}
             >
               <Columns3 className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Kanban</span>
+              Kanban
             </button>
           </div>
 
@@ -345,9 +357,10 @@ export function OrdersBoard({
         </div>
       </div>
 
-      {view === "kanban" ? (
-        // Kanban ignora el filtro (muestra siempre las 4 columnas de estado activo).
-        // Cancelado/devuelto no aparecen aquí (usar vista Lista con ese filtro).
+      {view === "kanban" && isDesktop ? (
+        // Kanban sólo en escritorio. En móvil caemos a Lista abajo.
+        // Ignora el filtro (muestra siempre las 4 columnas activas).
+        // Cancelado/devuelto no aparecen aquí (usar Lista con ese filtro).
         <KanbanBoard
           pedidos={pedidos}
           businessName={businessName}

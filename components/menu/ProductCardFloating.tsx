@@ -70,13 +70,16 @@ export function ProductCardFloating({ producto, tasaBs, onOpenDetail }: Props) {
         }
       }}
       className={[
-        "group relative overflow-hidden rounded-3xl bg-white shadow-mana-soft ring-1 ring-black/5 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mana-yellow",
+        "group relative overflow-hidden rounded-3xl lg:rounded-2xl bg-white shadow-mana-soft ring-1 ring-black/5 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mana-yellow",
         soldOut
           ? "cursor-not-allowed opacity-70"
           : "cursor-pointer hover:shadow-mana hover:-translate-y-0.5",
       ].join(" ")}
     >
-      <div className="relative aspect-square w-full overflow-hidden bg-gradient-to-br from-mana-yellow/60 via-mana-cream to-white">
+      {/* En desktop achicamos la foto a 4/3 para que el card quede más compacto
+          y quepan más productos en pantalla. En mobile/tablet mantenemos el
+          cuadrado que luce mejor en 2 columnas. */}
+      <div className="relative aspect-square lg:aspect-[4/3] w-full overflow-hidden bg-gradient-to-br from-mana-yellow/60 via-mana-cream to-white">
         <div
           className="absolute inset-0"
           style={{
@@ -105,7 +108,7 @@ export function ProductCardFloating({ producto, tasaBs, onOpenDetail }: Props) {
                   src={producto.imagen_url!}
                   alt={producto.nombre}
                   fill
-                  sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                  sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, (max-width: 1536px) 20vw, 16vw"
                   className={[
                     "object-contain transition-opacity duration-300",
                     imgLoaded ? "opacity-100" : "opacity-0",
@@ -126,8 +129,8 @@ export function ProductCardFloating({ producto, tasaBs, onOpenDetail }: Props) {
           </div>
         )}
 
-        <div className="absolute top-2.5 left-2.5 rounded-full bg-white/95 backdrop-blur px-3 py-1 shadow-mana-soft">
-          <span className="font-display text-sm font-extrabold text-mana-red">
+        <div className="absolute top-2 left-2 rounded-full bg-white/95 backdrop-blur px-2.5 py-0.5 lg:py-[3px] shadow-mana-soft">
+          <span className="font-display text-[13px] lg:text-[12px] font-extrabold text-mana-red">
             {formatUSD(producto.precio_usd)}
           </span>
         </div>
@@ -158,9 +161,9 @@ export function ProductCardFloating({ producto, tasaBs, onOpenDetail }: Props) {
             type="button"
             onClick={handleQuickAdd}
             aria-label={`Agregar ${producto.nombre} rápido`}
-            className="absolute bottom-2.5 right-2.5 inline-flex h-10 w-10 items-center justify-center rounded-full bg-mana-red text-white shadow-mana transition hover:bg-mana-red-dark active:scale-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mana-yellow"
+            className="absolute bottom-2 right-2 inline-flex h-10 w-10 lg:h-9 lg:w-9 items-center justify-center rounded-full bg-mana-red text-white shadow-mana transition hover:bg-mana-red-dark active:scale-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mana-yellow"
           >
-            <Plus className="h-5 w-5" strokeWidth={3} />
+            <Plus className="h-5 w-5 lg:h-4 lg:w-4" strokeWidth={3} />
           </button>
         )}
 
@@ -175,12 +178,12 @@ export function ProductCardFloating({ producto, tasaBs, onOpenDetail }: Props) {
         )}
       </div>
 
-      <div className="p-3">
-        <h3 className="font-display font-bold text-mana-ink leading-tight line-clamp-1">
+      <div className="p-3 lg:p-2.5">
+        <h3 className="font-display font-bold text-mana-ink leading-tight line-clamp-1 text-[14px] lg:text-[13px]">
           {producto.nombre}
         </h3>
         {producto.descripcion && (
-          <p className="mt-0.5 text-[11px] text-mana-muted line-clamp-2 leading-snug min-h-[2rem]">
+          <p className="mt-0.5 text-[11px] lg:text-[10.5px] text-mana-muted line-clamp-2 leading-snug min-h-[2rem] lg:min-h-[1.8rem]">
             {producto.descripcion}
           </p>
         )}
