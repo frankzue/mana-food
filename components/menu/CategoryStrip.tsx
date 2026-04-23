@@ -27,9 +27,9 @@ export function CategoryStrip({ categorias }: Props) {
   };
 
   return (
-    <section className="bg-mana-cream">
-      <div className="container py-3">
-        <div className="flex items-center justify-between mb-2">
+    <section className="bg-mana-cream lg:hidden border-b border-black/[0.04]">
+      <div className="container py-4 pb-5">
+        <div className="flex items-center justify-between mb-3">
           <h2 className="font-display text-sm font-bold text-mana-ink uppercase tracking-wider">
             Categorías
           </h2>

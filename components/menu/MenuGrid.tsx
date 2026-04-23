@@ -51,7 +51,7 @@ export function MenuGrid({
   }
 
   return (
-    <div className="container space-y-10 py-6">
+    <div className="container space-y-12 lg:space-y-16 py-8 lg:py-12">
       {categorias.map((cat) => {
         const items = grouped.get(cat.id);
         if (!items || items.length === 0) return null;
@@ -61,25 +61,25 @@ export function MenuGrid({
             key={cat.id}
             id={`cat-${cat.slug}`}
             data-cat-slug={cat.slug}
-            className="scroll-mt-32"
+            className="scroll-mt-36 lg:scroll-mt-40"
           >
-            <div className="mb-4 flex items-end justify-between">
-              <div className="flex items-center gap-2">
-                <span className="text-2xl">{CAT_EMOJI[cat.slug] ?? "🍽️"}</span>
-                <div>
+            <div className="mb-6 lg:mb-8 flex items-end justify-between">
+              <div className="flex items-center gap-3">
+                <span className="text-2xl lg:text-[1.75rem] leading-none">
+                  {CAT_EMOJI[cat.slug] ?? "🍽️"}
+                </span>
+                <div className="space-y-1">
                   <h2 className="font-display text-2xl sm:text-3xl font-black text-mana-ink leading-tight">
                     {cat.nombre}
                   </h2>
-                  <p className="text-xs text-mana-muted">
+                  <p className="text-xs sm:text-sm text-mana-muted">
                     {items.length} {items.length === 1 ? "opción" : "opciones"}
                   </p>
                 </div>
               </div>
             </div>
 
-            {/* Grid denso en desktop: hasta 5 columnas a partir de lg y 6 en 2xl.
-                En mobile se mantienen 2 columnas que es lo óptimo para tocar. */}
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 2xl:grid-cols-6 gap-3 lg:gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5 gap-3.5 md:gap-4 lg:gap-5">
               {items.map((p) => (
                 <ProductCardFloating
                   key={p.id}

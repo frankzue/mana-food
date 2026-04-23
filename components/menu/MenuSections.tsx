@@ -63,7 +63,7 @@ export function MenuSections({
         />
       )}
 
-      <main className="bg-mana-cream min-h-[50vh] pb-24">
+      <main className="bg-mana-cream min-h-[50vh] pb-24 lg:pb-28">
         <MenuGrid
           categorias={categorias}
           productos={filtered}

@@ -26,7 +26,7 @@ export function SearchBar({ value, onChange, resultsCount }: Props) {
   const isSearching = value.trim().length > 0;
 
   return (
-    <section className="bg-mana-cream pt-2 pb-2">
+    <section className="bg-mana-cream pt-5 pb-4 lg:pt-7 lg:pb-6">
       <div className="container">
         {/* En desktop centramos el buscador y limitamos su ancho para que
             no se vea como una barra vacia de extremo a extremo. Tambien

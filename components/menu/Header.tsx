@@ -199,7 +199,9 @@ export function Header() {
             Hecho al{" "}
             <span className="text-mana-yellow font-bold">momento</span>
             <span className="text-white/25 mx-2">•</span>
-            <span className="text-white/60">Pedí y te llega calientico</span>
+            <span className="text-white/60">
+              Recién hecha y en camino
+            </span>
           </p>
 
           {/* Derecha: chips informativos (horario · dirección · delivery) */}

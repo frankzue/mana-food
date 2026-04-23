@@ -32,9 +32,9 @@ export function FeaturedRow({
   if (productos.length === 0) return null;
 
   return (
-    <section className="bg-mana-cream py-4">
+    <section className="bg-mana-cream pt-2 pb-6 lg:pb-8">
       <div className="container">
-        <div className="flex items-end justify-between mb-3">
+        <div className="flex items-end justify-between mb-4">
           <div>
             <div className="flex items-center gap-1.5">
               <TrendingUp className="h-4 w-4 text-mana-red" />

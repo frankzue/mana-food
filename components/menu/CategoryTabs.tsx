@@ -44,11 +44,11 @@ export function CategoryTabs({ categorias }: Props) {
 
   return (
     <nav
-      className="sticky top-[92px] z-30 bg-mana-cream/95 backdrop-blur-md border-b border-black/5"
+      className="hidden lg:block sticky top-[92px] z-30 bg-mana-cream/95 backdrop-blur-md border-b border-black/5 shadow-[0_4px_20px_-8px_rgba(0,0,0,0.06)]"
       aria-label="Categorías"
     >
       <div className="container">
-        <ul className="flex gap-2 overflow-x-auto py-3 scrollbar-thin">
+        <ul className="flex gap-2.5 overflow-x-auto py-4 scrollbar-thin">
           {categorias.map((c) => {
             const isActive = c.slug === active;
             return (

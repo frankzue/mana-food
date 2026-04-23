@@ -178,16 +178,16 @@ export function ProductCardFloating({ producto, tasaBs, onOpenDetail }: Props) {
         )}
       </div>
 
-      <div className="p-3 lg:p-2.5">
-        <h3 className="font-display font-bold text-mana-ink leading-tight line-clamp-1 text-[14px] lg:text-[13px]">
+      <div className="p-3.5 lg:p-3.5">
+        <h3 className="font-display font-bold text-mana-ink leading-tight line-clamp-1 text-[14px] lg:text-[14px]">
           {producto.nombre}
         </h3>
         {producto.descripcion && (
-          <p className="mt-0.5 text-[11px] lg:text-[10.5px] text-mana-muted line-clamp-2 leading-snug min-h-[2rem] lg:min-h-[1.8rem]">
+          <p className="mt-1 text-[11px] lg:text-[11px] text-mana-muted line-clamp-2 leading-relaxed min-h-[2.25rem] lg:min-h-[2.35rem]">
             {producto.descripcion}
           </p>
         )}
-        <p className="text-[10px] text-mana-muted mt-1">
+        <p className="text-[10px] text-mana-muted mt-1.5">
           ≈ {formatBs(producto.precio_usd * tasaBs)}
         </p>
       </div>
