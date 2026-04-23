@@ -300,71 +300,57 @@ export function ManualDocument() {
         />
 
         <article className="bg-white rounded-2xl shadow-sm ring-1 ring-black/5 p-6 sm:p-8 space-y-5 mb-6">
-          <FAQ q="¿Hay que instalar algo para pedir?" a="No. Solo abrir el enlace de la tienda en el navegador del teléfono o la PC." />
           <FAQ
-            q="¿Los precios en bolívares son oficiales ante el fisco?"
-            a="Se calculan con la tasa BCV que configuras en el panel. Sirven para orientar al cliente; la facturación y los libros oficiales son un proceso aparte."
+            q="¿Hay que instalar una app para pedir?"
+            a="No. El cliente solo abre el enlace de la tienda en el navegador del teléfono, tablet o computadora."
           />
           <FAQ
-            q="¿Se pierden los pedidos si falla internet?"
-            a="Los que ya quedaron guardados en el sistema no. Si no hay conexión, no se pueden enviar pedidos nuevos hasta que vuelva la red."
+            q="¿Los montos en bolívares valen ante el fisco?"
+            a="En el sistema se calculan con la tasa BCV que configuras en el panel; sirven para cobrar y orientar al cliente. La facturación oficial y los libros contables son aparte y los sigues llevando como siempre."
           />
           <FAQ
-            q="¿Los clientes pueden ver el panel de administración?"
-            a="No, a menos que alguien les pase la URL /admin y una cuenta. El menú público no muestra ventas ni datos de otros clientes."
+            q="¿Se pierden los pedidos si se cae el internet?"
+            a="Los que ya quedaron registrados, no. Si no hay conexión, no se pueden enviar pedidos nuevos hasta que vuelva la red."
           />
           <FAQ
-            q="¿Puedo cambiar precios yo mismo?"
-            a="Sí. Panel → Productos → Editar en cada ítem (precio, costo, texto, mostrar u ocultar). Los cambios se reflejan en la tienda; si algo no se ve, recarga la página o espera unos segundos por caché."
+            q="¿Mis clientes ven los pedidos o datos de otras personas?"
+            a="No. El menú público solo muestra productos y precios. Los pedidos, teléfonos y totales solo los ve quien entra al panel con usuario y contraseña."
           />
           <FAQ
-            q="¿Cómo oculto un producto que se acabó hoy?"
-            a="En Productos usa «Ocultar»; desaparece del menú del cliente pero no se borra. Cuando vuelva a haber, pulsa «Mostrar»."
+            q="¿Qué tan seguros están los datos de clientes y ventas?"
+            a="La página usa conexión cifrada (HTTPS). La información sensible no se expone en la tienda pública: solo personal autorizado con inicio de sesión accede al panel. Usa contraseñas difíciles de adivinar, no las compartas por WhatsApp y cierra sesión en equipos que usen varias personas."
           />
           <FAQ
-            q="¿Qué pasa si olvidé la contraseña del admin?"
-            a="Desde Supabase (Auth → Users) se puede enviar recuperación de contraseña o resetearla quien administre el proyecto. No uses la misma clave en todos los locales."
+            q="¿Qué hago si olvidé la contraseña del panel?"
+            a="Contacta a quien te instaló o mantiene el sistema: esa persona debe restablecer el acceso de forma segura. No pidas ni envíes claves por chats abiertos ni uses la misma contraseña para todo el personal."
           />
           <FAQ
-            q="¿Puedo tener varios usuarios administradores?"
-            a="Sí: cada trabajador puede tener su propio correo y contraseña en Supabase Auth. Así queda más claro quién opera el panel."
-          />
-          <FAQ q="¿Cómo actualizo la tasa BCV?" a="Panel → Configuración → campo Tasa BCV → Guardar. Revisa que el valor sea el que aplican ese día para cobrar." />
-          <FAQ
-            q="¿El cliente puede hacer el pedido sin WhatsApp?"
-            a="Sí: el pedido se registra con el número que escriba. Lo ideal es que sea el mismo WhatsApp para enviarle el resumen y el comprobante."
+            q="¿Varios trabajadores pueden entrar al panel?"
+            a="Sí. Lo recomendable es que cada uno tenga su propio usuario y contraseña. Es más seguro que una sola cuenta compartida y deja claro quién opera el sistema."
           />
           <FAQ
-            q="¿Por qué suena cuando entra un pedido?"
-            a="El panel usa un aviso sonoro y visual para que no se pierda un pedido nuevo. Puedes silenciarlo con el control «Sonido» en la lista de pedidos."
+            q="¿Puedo cambiar precios u ocultar un producto agotado?"
+            a="Sí, desde Productos en el panel: editas precio, costo o texto, o usas Ocultar para quitarlo del menú sin borrarlo. Cuando vuelva el inventario, pulsa Mostrar."
           />
           <FAQ
-            q="¿Los pedidos aparecen solos o hay que refrescar?"
-            a="Con la conexión en tiempo real activa, suelen aparecer casi al instante. Si algo no se ve, desliza para actualizar o abre de nuevo la pestaña."
-          />
-          <FAQ
-            q="¿Qué es la propina en el checkout?"
-            a="Es un monto opcional en dólares que el cliente puede añadir. Se suma al total y sale en el reporte de ventas como propinas."
+            q="¿Cómo actualizo la tasa del día?"
+            a="Panel → Configuración → Tasa BCV → Guardar. Revisa que coincida con la tasa con la que vas a cobrar ese día."
           />
           <FAQ
             q="¿Qué diferencia hay entre «Pagado» y «Completado»?"
-            a="«Pagado» = ya confirmaste el pago del cliente. «Completado» = pedido entregado o retirado y cerrado operativamente. Así separas cobro y despacho."
+            a="Pagado significa que ya confirmaste el dinero del cliente. Completado significa que el pedido ya se entregó o retiró y cerraste la operación. Así separas cobro y despacho."
           />
           <FAQ
             q="¿Cómo registro una devolución de dinero?"
-            a="En la tarjeta del pedido, botón Devolución: indicas monto y motivo. El pedido puede quedar marcado como devuelto y se refleja en reportes."
+            a="En la tarjeta del pedido, usa Devolución: indicas monto y motivo. Queda registrado y se refleja en los reportes."
           />
           <FAQ
-            q="¿El reporte PDF de ventas o de caja reemplaza mi libro?"
-            a="No. Es un respaldo y una vista rápida. Sigue llevando tu libro y tu facturación como marca la ley y tu contador."
+            q="¿El PDF de ventas o de caja reemplaza mi libro contable?"
+            a="No. Es un respaldo y un resumen rápido. Tu libro, máquina fiscal y asesoría contable siguen siendo la referencia oficial."
           />
           <FAQ
-            q="¿Puedo usar el panel solo en el teléfono?"
-            a="Sí. En Chrome o Edge del Android puedes «instalar» el panel como app (aviso que aparece abajo). En iPhone, Safari → Compartir → Añadir a inicio."
-          />
-          <FAQ
-            q="¿Qué hago si un cliente dice que el total no cuadra?"
-            a="Revisa en el panel el pedido exacto, la zona de envío, propina y la tasa del día. Si la tasa estaba vieja, corrígela para los próximos pedidos y explica la diferencia al cliente."
+            q="¿Qué reviso si el cliente dice que el total no cuadra?"
+            a="Abre el pedido en el panel y verifica productos, zona de envío, propina opcional y la tasa que tenías cargada ese momento. Si la tasa estaba desactualizada, corrígela para los siguientes pedidos y explica la diferencia con calma."
           />
         </article>
 
