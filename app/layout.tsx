@@ -21,6 +21,13 @@ const SITE_URL =
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
+  icons: {
+    icon: [
+      { url: "/icons/pwa-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icons/pwa-512.png", sizes: "512x512", type: "image/png" },
+    ],
+    apple: "/icons/pwa-180.png",
+  },
   title: {
     default: `${BUSINESS.name} · Pide online`,
     template: `%s · ${BUSINESS.name}`,
@@ -37,13 +44,13 @@ export const metadata: Metadata = {
     description: BUSINESS.tagline,
     type: "website",
     locale: "es_VE",
-    images: [{ url: "/logo.png", width: 512, height: 512, alt: BUSINESS.name }],
+    images: [{ url: "/icons/pwa-512.png", width: 512, height: 512, alt: BUSINESS.name }],
   },
   twitter: {
     card: "summary",
     title: BUSINESS.name,
     description: BUSINESS.tagline,
-    images: ["/logo.png"],
+    images: ["/icons/pwa-512.png"],
   },
 };
 
@@ -61,7 +68,7 @@ const jsonLd = {
   servesCuisine: ["Fast Food", "Hamburguesas", "Hot Dogs"],
   priceRange: "$$",
   url: SITE_URL,
-  image: `${SITE_URL}/logo.png`,
+  image: `${SITE_URL}/icons/pwa-512.png`,
   telephone: "+58 412-0000000",
   address: {
     "@type": "PostalAddress",
