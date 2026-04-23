@@ -52,7 +52,7 @@ export default async function AdminPage() {
     <>
       <AdminHeader email={user?.email} />
       <main className="min-h-screen bg-mana-cream">
-        <div className="container py-5 space-y-5">
+        <div className="container-admin py-5 space-y-5">
           <div>
             <h2 className="font-display text-2xl font-black text-mana-ink">
               Pedidos

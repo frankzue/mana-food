@@ -1,31 +1,28 @@
 import Link from "next/link";
-import { ArrowLeft, Users } from "lucide-react";
+import { ArrowLeft, Package } from "lucide-react";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { AdminHeader } from "@/components/admin/AdminHeader";
-import type { Pedido } from "@/types/database";
-import { ClientesBoard } from "./ClientesBoard";
+import type { Producto, Categoria } from "@/types/database";
+import { ProductosBoard } from "./ProductosBoard";
 
 export const dynamic = "force-dynamic";
 
 export const metadata = {
-  title: "Panel · Clientes",
+  title: "Panel · Productos",
 };
 
-const MAX_PEDIDOS = 1500;
-
-export default async function AdminClientesPage() {
+export default async function AdminProductosPage() {
   const supabase = createSupabaseServerClient();
 
-  const [userRes, pedidosRes] = await Promise.all([
+  const [userRes, categoriasRes, productosRes] = await Promise.all([
     supabase.auth.getUser(),
+    supabase.from("categorias").select("*").order("orden", { ascending: true }),
     supabase
-      .from("pedidos")
+      .from("productos")
       .select("*")
-      .order("created_at", { ascending: false })
-      .limit(MAX_PEDIDOS),
+      .order("orden", { ascending: true }),
   ]);
   const user = userRes.data.user;
-  const pedidos = pedidosRes.data;
 
   return (
     <>
@@ -40,16 +37,19 @@ export default async function AdminClientesPage() {
               <ArrowLeft className="h-3.5 w-3.5" /> Volver a pedidos
             </Link>
             <h2 className="font-display text-2xl font-black text-mana-ink mt-1 flex items-center gap-2">
-              <Users className="h-6 w-6 text-mana-red" />
-              Clientes
+              <Package className="h-6 w-6 text-mana-red" />
+              Productos
             </h2>
             <p className="text-sm text-mana-muted">
-              Agrupados por número de teléfono. Clic en una fila para ver su
-              historial.
+              Edita precios, costos y disponibilidad. Los cambios se reflejan al
+              instante en la tienda.
             </p>
           </div>
 
-          <ClientesBoard pedidos={(pedidos ?? []) as Pedido[]} />
+          <ProductosBoard
+            productos={(productosRes.data ?? []) as Producto[]}
+            categorias={(categoriasRes.data ?? []) as Categoria[]}
+          />
         </div>
       </main>
     </>

@@ -39,7 +39,7 @@ export default async function AdminCajaPage() {
     <>
       <AdminHeader email={user?.email} />
       <main className="min-h-screen bg-mana-cream">
-        <div className="container py-5 space-y-5">
+        <div className="container-admin py-5 space-y-5">
           <div className="space-y-3">
             <Link
               href="/admin"

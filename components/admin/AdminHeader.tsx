@@ -9,6 +9,7 @@ import {
   ListOrdered,
   LineChart,
   Users,
+  Package,
   type LucideIcon,
 } from "lucide-react";
 import { AdminBell } from "./AdminBell";
@@ -54,6 +55,12 @@ const NAV: NavItemWithAliases[] = [
     activePrefix: "/admin/clientes",
   },
   {
+    href: "/admin/productos",
+    label: "Productos",
+    icon: Package,
+    activePrefix: "/admin/productos",
+  },
+  {
     href: "/admin/settings",
     label: "Config",
     icon: Settings,
@@ -76,7 +83,7 @@ export function AdminHeader({ email }: Props) {
 
   return (
     <header className="sticky top-0 z-40 bg-mana-black text-white shadow-mana-soft print:hidden">
-      <div className="container flex items-center justify-between gap-3 py-3">
+      <div className="container-admin flex items-center justify-between gap-3 py-3">
         <div className="flex items-center gap-2 sm:gap-3 min-w-0">
           <div className="relative h-10 w-10 shrink-0 rounded-xl overflow-hidden bg-mana-black ring-2 ring-mana-yellow/40">
             <Image

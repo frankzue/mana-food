@@ -60,7 +60,7 @@ export default async function AdminVentasPage() {
     <>
       <AdminHeader email={user?.email} />
       <main className="min-h-screen bg-mana-cream">
-        <div className="container py-5 space-y-5 print:py-0">
+        <div className="container-admin py-5 space-y-5 print:py-0">
           <div className="print:hidden space-y-3">
             <Link
               href="/admin"

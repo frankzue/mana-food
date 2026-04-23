@@ -10,8 +10,17 @@ import type {
 } from "@/types/database";
 import type { PaymentDetails } from "@/lib/utils/whatsapp";
 import { OrderCard } from "./OrderCard";
+import { KanbanBoard } from "./KanbanBoard";
 import { AnimatePresence, motion } from "framer-motion";
-import { Bell, BellOff, RefreshCw, PartyPopper, X } from "lucide-react";
+import {
+  Bell,
+  BellOff,
+  RefreshCw,
+  PartyPopper,
+  X,
+  LayoutGrid,
+  Columns3,
+} from "lucide-react";
 import { formatUSD } from "@/lib/utils";
 
 type Props = {
@@ -37,6 +46,8 @@ type Toast = {
   total: number;
 };
 
+type ViewMode = "list" | "kanban";
+
 export function OrdersBoard({
   initialPedidos,
   businessName,
@@ -44,6 +55,7 @@ export function OrdersBoard({
 }: Props) {
   const [pedidos, setPedidos] = useState<PedidoConItems[]>(initialPedidos);
   const [filter, setFilter] = useState<EstadoPedido | "todos">("todos");
+  const [view, setView] = useState<ViewMode>("list");
   const [soundOn, setSoundOn] = useState(true);
   const [flash, setFlash] = useState(false);
   const [toast, setToast] = useState<Toast | null>(null);
@@ -63,7 +75,23 @@ export function OrdersBoard({
     if (typeof Notification !== "undefined") {
       setNotifPermission(Notification.permission);
     }
+    // Persistir preferencia Lista/Kanban entre sesiones
+    try {
+      const saved = localStorage.getItem("mana-admin-view");
+      if (saved === "kanban" || saved === "list") setView(saved);
+    } catch {
+      // ignore
+    }
   }, []);
+
+  function toggleView(v: ViewMode) {
+    setView(v);
+    try {
+      localStorage.setItem("mana-admin-view", v);
+    } catch {
+      // ignore
+    }
+  }
 
   useEffect(() => {
     const supabase = createSupabaseBrowserClient();
@@ -244,6 +272,36 @@ export function OrdersBoard({
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
+          {/* Toggle Lista / Kanban */}
+          <div className="inline-flex rounded-full bg-white ring-1 ring-black/10 p-0.5 shadow-sm">
+            <button
+              onClick={() => toggleView("list")}
+              className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold transition ${
+                view === "list"
+                  ? "bg-mana-ink text-white"
+                  : "text-mana-ink hover:bg-mana-cream"
+              }`}
+              title="Vista en lista"
+              aria-pressed={view === "list"}
+            >
+              <LayoutGrid className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Lista</span>
+            </button>
+            <button
+              onClick={() => toggleView("kanban")}
+              className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold transition ${
+                view === "kanban"
+                  ? "bg-mana-ink text-white"
+                  : "text-mana-ink hover:bg-mana-cream"
+              }`}
+              title="Vista Kanban (arrastra entre columnas)"
+              aria-pressed={view === "kanban"}
+            >
+              <Columns3 className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Kanban</span>
+            </button>
+          </div>
+
           {notifPermission !== "granted" && (
             <button
               onClick={requestNotif}
@@ -287,7 +345,15 @@ export function OrdersBoard({
         </div>
       </div>
 
-      {visible.length === 0 ? (
+      {view === "kanban" ? (
+        // Kanban ignora el filtro (muestra siempre las 4 columnas de estado activo).
+        // Cancelado/devuelto no aparecen aquí (usar vista Lista con ese filtro).
+        <KanbanBoard
+          pedidos={pedidos}
+          businessName={businessName}
+          payment={payment}
+        />
+      ) : visible.length === 0 ? (
         <div className="card-mana py-16 text-center">
           <RefreshCw className="h-8 w-8 mx-auto text-mana-muted mb-2" />
           <p className="font-display font-bold text-mana-ink">
@@ -298,7 +364,9 @@ export function OrdersBoard({
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4">
+        // Grid de Lista: en pantallas grandes mostramos hasta 4 columnas para
+        // aprovechar el ancho del escritorio (antes se veía pequeño en PC).
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-3 sm:gap-4">
           <AnimatePresence mode="popLayout">
             {visible.map((p) => (
               <OrderCard

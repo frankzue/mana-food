@@ -24,7 +24,7 @@ export default async function AdminSettingsPage() {
     <>
       <AdminHeader email={user?.email} />
       <main className="min-h-screen bg-mana-cream">
-        <div className="container py-5 space-y-5">
+        <div className="container-admin py-5 space-y-5">
           <div className="flex items-center justify-between gap-3">
             <div>
               <Link

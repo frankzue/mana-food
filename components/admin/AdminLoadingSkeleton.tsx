@@ -24,7 +24,7 @@ export function AdminLoadingSkeleton({
 }: Props) {
   return (
     <main className="min-h-[70vh] bg-mana-cream">
-      <div className="container py-5 space-y-5">
+      <div className="container-admin py-5 space-y-5">
         <div className="space-y-2">
           <div className="h-3 w-28 rounded bg-black/10 animate-pulse" />
           <div className="flex items-center gap-2">

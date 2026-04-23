@@ -71,6 +71,17 @@
     background-size: 200% 100%;
     @apply animate-shimmer;
   }
+
+  /*
+   * container-admin:
+   * Contenedor ancho pensado para el panel: aprovecha pantallas grandes
+   * (hasta 1760px) y mantiene el mismo padding en mobile que `container`.
+   * En monitores 24"+ el panel ya no se ve "apretado al centro".
+   */
+  .container-admin {
+    @apply w-full mx-auto px-4 sm:px-6;
+    max-width: 1760px;
+  }
 }
 
 html {
