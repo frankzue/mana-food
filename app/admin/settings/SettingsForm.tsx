@@ -203,7 +203,7 @@ export function SettingsForm({ initial }: Props) {
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
       {/* --------- TASAS & GENERAL --------- */}
-      <section className="card-mana p-5 sm:p-6 space-y-4">
+      <section id="config-tasa-bcv" className="card-mana p-5 sm:p-6 space-y-4 scroll-mt-28">
         <div>
           <h2 className="font-display text-lg font-black text-mana-ink">
             Tasas y general

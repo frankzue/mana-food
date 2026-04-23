@@ -59,11 +59,35 @@ export async function PUT(request: Request) {
 
     // 3. Upsert con service role (bypass RLS, más predecible)
     const admin = createSupabaseAdminClient();
-    const rows = Object.entries(parsed.data).map(([key, value]) => ({
-      key,
-      value: String(value),
-      updated_at: new Date().toISOString(),
-    }));
+
+    const { data: prevTasaRow } = await admin
+      .from("configuracion")
+      .select("value")
+      .eq("key", "tasa_bs")
+      .maybeSingle();
+
+    const prevTasa = prevTasaRow?.value?.trim() ?? null;
+    const newTasa = parsed.data.tasa_bs.trim();
+    const tasaValorCambio =
+      prevTasa === null || prevTasa === "" || prevTasa !== newTasa;
+
+    const ts = new Date().toISOString();
+    const rows: { key: string; value: string; updated_at: string }[] =
+      Object.entries(parsed.data).map(([key, value]) => ({
+        key,
+        value: String(value),
+        updated_at: ts,
+      }));
+
+    // Solo cuando cambia el número de la tasa se ancla la fecha para el
+    // recordatorio BCV (lun–vie después de las 16:00 Caracas).
+    if (tasaValorCambio) {
+      rows.push({
+        key: "tasa_bs_ultima_actualizacion",
+        value: ts,
+        updated_at: ts,
+      });
+    }
 
     const { error } = await admin
       .from("configuracion")

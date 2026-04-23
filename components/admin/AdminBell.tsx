@@ -2,9 +2,13 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { Bell, Clock, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { Bell, Clock, AlertTriangle, CheckCircle2, Banknote } from "lucide-react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import type { Pedido } from "@/types/database";
+import {
+  shouldAlertStaleTasaBcV,
+  tasaBcVReminderMessage,
+} from "@/lib/utils/bcv-tasa-reminder";
 
 /**
  * Campana de pendientes en el header del admin.
@@ -16,6 +20,10 @@ import type { Pedido } from "@/types/database";
  *
  * El badge rojo muestra el total. Al tocar la campana se abre un
  * popover con la lista y atajo directo a cada pedido.
+ *
+ * Además, lun–vie después de las 16:00 (hora Caracas), si la tasa BCV no
+ * se ha actualizado hoy (valor distinto guardado en configuración), se
+ * añade un recordatorio con enlace a Configuración. Fin de semana no avisa.
  *
  * Fuente de datos: Supabase realtime sobre la tabla `pedidos`, igual
  * que el board principal. Así aparece un pendiente al instante sin
@@ -38,6 +46,8 @@ export function AdminBell() {
   const [open, setOpen] = useState(false);
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
   const [loaded, setLoaded] = useState(false);
+  const [ultimaTasaIso, setUltimaTasaIso] = useState<string | null>(null);
+  const [tasaMetaLoaded, setTasaMetaLoaded] = useState(false);
   const rootRef = useRef<HTMLDivElement | null>(null);
 
   // Cargar estado inicial + suscribirse a cambios
@@ -59,6 +69,19 @@ export function AdminBell() {
     }
     load();
 
+    async function loadTasaMeta() {
+      const { data } = await supabase
+        .from("configuracion")
+        .select("value")
+        .eq("key", "tasa_bs_ultima_actualizacion")
+        .maybeSingle();
+      if (active) {
+        setUltimaTasaIso(data?.value?.trim() ?? null);
+        setTasaMetaLoaded(true);
+      }
+    }
+    loadTasaMeta();
+
     const channel = supabase
       .channel("bell-pendientes")
       .on(
@@ -76,6 +99,16 @@ export function AdminBell() {
           } else if (payload.eventType === "DELETE") {
             const p = payload.old as Pedido;
             setPedidos((prev) => prev.filter((x) => x.id !== p.id));
+          }
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "configuracion" },
+        (payload) => {
+          const row = payload.new as { key?: string; value?: string } | null;
+          if (row?.key === "tasa_bs_ultima_actualizacion" && row.value != null) {
+            setUltimaTasaIso(String(row.value).trim());
           }
         }
       )
@@ -149,7 +182,10 @@ export function AdminBell() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pedidos, tick]);
 
-  const count = pendientes.length;
+  const tasaStale =
+    tasaMetaLoaded && shouldAlertStaleTasaBcV(new Date(), ultimaTasaIso);
+  const count = pendientes.length + (tasaStale ? 1 : 0);
+  const allLoaded = loaded && tasaMetaLoaded;
 
   return (
     <div ref={rootRef} className="relative">
@@ -202,7 +238,7 @@ export function AdminBell() {
           </div>
 
           <div className="max-h-[65vh] overflow-y-auto bg-white">
-            {!loaded ? (
+            {!allLoaded ? (
               <div className="p-6 text-center text-sm text-gray-400">
                 Cargando…
               </div>
@@ -218,6 +254,33 @@ export function AdminBell() {
               </div>
             ) : (
               <ul className="divide-y divide-gray-100">
+                {tasaStale && (
+                  <li key="tasa-bcv-reminder">
+                    <Link
+                      href="/admin/settings#config-tasa-bcv"
+                      onClick={() => setOpen(false)}
+                      className="block px-4 py-3 hover:bg-violet-50/80 transition bg-violet-50/40"
+                    >
+                      <div className="flex items-start gap-3">
+                        <span className="grid place-items-center h-9 w-9 rounded-full shrink-0 ring-1 bg-violet-100 text-violet-800 ring-violet-200">
+                          <Banknote className="h-4 w-4" aria-hidden />
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <div className="font-display font-black text-sm text-mana-ink">
+                            Tasa BCV del día
+                          </div>
+                          <p className="text-[12.5px] font-semibold text-violet-800 mt-0.5 leading-snug">
+                            Aún no actualizada hoy (hora Caracas). Revisa después de la publicación del
+                            BCV (lun–vie ~15:00–16:00).
+                          </p>
+                          <p className="text-[11px] text-gray-600 mt-1 leading-snug">
+                            {tasaBcVReminderMessage()}
+                          </p>
+                        </div>
+                      </div>
+                    </Link>
+                  </li>
+                )}
                 {pendientes.map((p) => (
                   <li key={p.id}>
                     <Link
@@ -234,14 +297,25 @@ export function AdminBell() {
           </div>
 
           {count > 0 && (
-            <div className="border-t border-gray-100 bg-gray-50/60 px-4 py-2 text-center">
-              <Link
-                href="/admin"
-                onClick={() => setOpen(false)}
-                className="text-[11px] font-bold text-mana-red hover:underline"
-              >
-                Ver todos los pedidos →
-              </Link>
+            <div className="border-t border-gray-100 bg-gray-50/60 px-4 py-2 flex flex-col gap-1.5 text-center">
+              {tasaStale && (
+                <Link
+                  href="/admin/settings#config-tasa-bcv"
+                  onClick={() => setOpen(false)}
+                  className="text-[11px] font-bold text-violet-700 hover:underline"
+                >
+                  Ir a Configuración · Tasa BCV →
+                </Link>
+              )}
+              {pendientes.length > 0 && (
+                <Link
+                  href="/admin"
+                  onClick={() => setOpen(false)}
+                  className="text-[11px] font-bold text-mana-red hover:underline"
+                >
+                  Ver todos los pedidos →
+                </Link>
+              )}
             </div>
           )}
         </div>
