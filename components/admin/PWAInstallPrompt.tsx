@@ -112,14 +112,19 @@ export function PWAInstallPrompt() {
     >
       <div className="rounded-2xl bg-white shadow-2xl ring-1 ring-black/10 overflow-hidden">
         <div className="p-4 flex items-start gap-3">
-          <div className="relative h-12 w-12 rounded-xl overflow-hidden bg-mana-black ring-2 ring-mana-yellow/40 shrink-0">
-            <Image
-              src="/logo.png"
-              alt="Maná"
-              fill
-              sizes="48px"
-              className="object-contain"
-            />
+          {/* Icono: fondo gris-negro moderno con un ligero gradiente y el
+              logo en un tamaño algo menor (p-1.5) para que "respire" dentro
+              del contenedor y no se vea apretado. */}
+          <div className="relative h-11 w-11 rounded-xl overflow-hidden bg-gradient-to-br from-gray-900 to-gray-700 ring-1 ring-black/20 shadow-inner shrink-0 grid place-items-center">
+            <div className="relative h-7 w-7">
+              <Image
+                src="/logo.png"
+                alt="Maná"
+                fill
+                sizes="28px"
+                className="object-contain"
+              />
+            </div>
           </div>
           <div className="min-w-0 flex-1">
             <h3 className="font-display font-black text-sm text-mana-ink leading-tight">

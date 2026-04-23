@@ -204,12 +204,15 @@ export function Header() {
 
           {/* Derecha: chips informativos (horario · dirección · delivery) */}
           <div className="flex items-center gap-2 shrink-0">
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-white/5 ring-1 ring-white/10 px-3 py-1.5 text-xs font-semibold text-white/90">
+            <span className="inline-flex items-center gap-2 rounded-full bg-white/5 ring-1 ring-white/10 px-3 py-1.5 text-xs text-white/90">
               <Clock
                 className="h-3.5 w-3.5 text-mana-yellow"
                 strokeWidth={2.4}
               />
-              6 PM – 4 AM
+              <span className="text-[10px] font-black uppercase tracking-[0.14em] text-mana-yellow leading-none">
+                Horario
+              </span>
+              <span className="font-semibold leading-none">6 PM – 4 AM</span>
             </span>
             <a
               href={mapsUrl}
