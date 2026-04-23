@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { guardAdminMutation } from "@/lib/security/admin-api-guard";
 import { z } from "zod";
 
 export const runtime = "nodejs";
@@ -32,19 +32,10 @@ const settingsSchema = z.object({
 
 export async function PUT(request: Request) {
   try {
-    // 1. Auth: solo admins (authenticated) pueden editar
-    const supaAuth = createSupabaseServerClient();
-    const {
-      data: { user },
-    } = await supaAuth.auth.getUser();
-    if (!user) {
-      return NextResponse.json(
-        { error: "No autorizado" },
-        { status: 401 }
-      );
-    }
+    const gate = await guardAdminMutation(request);
+    if (!gate.ok) return gate.response;
 
-    // 2. Validación de inputs
+    // Validación de inputs
     const body = await request.json();
     const parsed = settingsSchema.safeParse(body);
     if (!parsed.success) {

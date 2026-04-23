@@ -10,6 +10,7 @@ export function LoginForm() {
   const router = useRouter();
   const params = useSearchParams();
   const next = params.get("next") || "/admin";
+  const urlNotAuthorized = params.get("error") === "not_authorized";
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -84,6 +85,13 @@ export function LoginForm() {
                 placeholder="••••••••"
               />
             </div>
+
+            {urlNotAuthorized && (
+              <div className="rounded-xl bg-amber-50 ring-1 ring-amber-200 p-2.5 text-sm text-amber-900 text-center">
+                Esta cuenta no tiene permiso para el panel. Si crees que es
+                un error, contacta al administrador.
+              </div>
+            )}
 
             {err && (
               <div className="rounded-xl bg-red-50 ring-1 ring-red-200 p-2.5 text-sm text-red-700 text-center">

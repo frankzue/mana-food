@@ -3,40 +3,35 @@ import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createOrderSchema } from "@/lib/validators/order";
 import { calcularTotales, type CartLine } from "@/lib/utils/calculations";
 import { MODIFIER_CATALOG, summarizeModifiers } from "@/lib/modifiers";
+import { checkRateLimit } from "@/lib/security/rate-limit";
+import { getRequestClientIp } from "@/lib/security/client-ip";
+import { isOrdersPostOriginAllowed } from "@/lib/security/orders-origin";
+import { publicOrderErrorPayload } from "@/lib/security/sanitize-client-error";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-// Rate limit MUY básico en memoria (proceso único, sin Redis).
-// Previene que un usuario spamee >5 pedidos en 60s desde la misma IP.
-const rateMap = new Map<string, { count: number; windowStart: number }>();
 const RATE_WINDOW_MS = 60 * 1000;
 const RATE_MAX = 5;
 
-function getClientIp(req: Request): string {
-  const fwd = req.headers.get("x-forwarded-for");
-  if (fwd) return fwd.split(",")[0]?.trim() ?? "unknown";
-  return req.headers.get("x-real-ip") ?? "unknown";
-}
-
-function isRateLimited(ip: string): boolean {
-  const now = Date.now();
-  const rec = rateMap.get(ip);
-  if (!rec || now - rec.windowStart > RATE_WINDOW_MS) {
-    rateMap.set(ip, { count: 1, windowStart: now });
-    return false;
-  }
-  rec.count += 1;
-  return rec.count > RATE_MAX;
-}
-
 export async function POST(request: Request) {
   try {
-    const ip = getClientIp(request);
-    if (isRateLimited(ip)) {
+    if (!isOrdersPostOriginAllowed(request)) {
       return NextResponse.json(
-        { error: "Demasiados pedidos en poco tiempo. Espera un minuto." },
-        { status: 429 }
+        { error: "Solicitud no permitida desde este origen." },
+        { status: 403 }
+      );
+    }
+
+    const ip = getRequestClientIp(request);
+    const rl = checkRateLimit(`orders:${ip}`, RATE_MAX, RATE_WINDOW_MS);
+    if (!rl.ok) {
+      return NextResponse.json(
+        {
+          error: "Demasiados pedidos en poco tiempo. Espera un minuto.",
+          retry_after_sec: rl.retryAfterSec,
+        },
+        { status: 429, headers: { "Retry-After": String(rl.retryAfterSec) } }
       );
     }
 
@@ -191,15 +186,12 @@ export async function POST(request: Request) {
 
     if (insertErr || !pedido) {
       console.error("Error insertando pedido", insertErr);
-      // Devolvemos el detalle del error de Postgres para poder diagnosticar
-      // (columna faltante, check constraint, etc.) desde el navegador.
       return NextResponse.json(
-        {
-          error: "No se pudo crear el pedido",
+        publicOrderErrorPayload("No se pudo crear el pedido", {
           detalle: insertErr?.message ?? null,
           hint: insertErr?.hint ?? null,
           code: insertErr?.code ?? null,
-        },
+        }),
         { status: 500 }
       );
     }
@@ -221,12 +213,11 @@ export async function POST(request: Request) {
       console.error("Error insertando items", itemsErr);
       await supabase.from("pedidos").delete().eq("id", pedido.id);
       return NextResponse.json(
-        {
-          error: "No se pudieron crear los items del pedido",
+        publicOrderErrorPayload("No se pudieron crear los items del pedido", {
           detalle: itemsErr.message,
           hint: itemsErr.hint ?? null,
           code: itemsErr.code ?? null,
-        },
+        }),
         { status: 500 }
       );
     }

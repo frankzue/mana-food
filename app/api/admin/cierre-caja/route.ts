@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { guardAdminMutation } from "@/lib/security/admin-api-guard";
 import { z } from "zod";
 
 export const runtime = "nodejs";
@@ -30,13 +30,8 @@ const schema = z.object({
 
 export async function POST(request: Request) {
   try {
-    const authClient = createSupabaseServerClient();
-    const {
-      data: { user },
-    } = await authClient.auth.getUser();
-    if (!user) {
-      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-    }
+    const gate = await guardAdminMutation(request);
+    if (!gate.ok) return gate.response;
 
     const body = await request.json();
     const parsed = schema.safeParse(body);
@@ -53,7 +48,7 @@ export async function POST(request: Request) {
       .upsert(
         {
           ...parsed.data,
-          cerrado_por: user.email ?? null,
+          cerrado_por: gate.user.email ?? null,
           cerrado_at: new Date().toISOString(),
         },
         { onConflict: "fecha" }

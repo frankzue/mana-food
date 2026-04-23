@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { guardAdminMutation } from "@/lib/security/admin-api-guard";
+import { publicOrderErrorPayload } from "@/lib/security/sanitize-client-error";
 import { z } from "zod";
 
 export const runtime = "nodejs";
@@ -34,13 +35,8 @@ const patchSchema = z.object({
 
 export async function PATCH(request: Request) {
   try {
-    const supaAuth = createSupabaseServerClient();
-    const {
-      data: { user },
-    } = await supaAuth.auth.getUser();
-    if (!user) {
-      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-    }
+    const gate = await guardAdminMutation(request);
+    if (!gate.ok) return gate.response;
 
     const body = await request.json();
     const parsed = patchSchema.safeParse(body);
@@ -73,10 +69,11 @@ export async function PATCH(request: Request) {
     if (error) {
       console.error("PATCH /api/admin/productos", error);
       return NextResponse.json(
-        {
-          error: "No se pudo actualizar el producto",
+        publicOrderErrorPayload("No se pudo actualizar el producto", {
           detalle: error.message,
-        },
+          hint: error.hint ?? null,
+          code: error.code ?? null,
+        }),
         { status: 500 }
       );
     }

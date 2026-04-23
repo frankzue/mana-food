@@ -1,5 +1,6 @@
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { assertAdminEmailAllowed } from "@/lib/security/admin-allowlist";
 
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({ request });
@@ -40,6 +41,23 @@ export async function updateSession(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
   const isAdminPath =
     pathname.startsWith("/admin") && !pathname.startsWith("/admin/login");
+
+  // Lista blanca opcional (ADMIN_EMAIL / ADMIN_EMAILS): cierra sesión si el
+  // correo no está autorizado y evita acceso al panel.
+  if (user && !assertAdminEmailAllowed(user.email)) {
+    if (pathname === "/admin/login") {
+      await supabase.auth.signOut();
+      return response;
+    }
+    if (isAdminPath) {
+      await supabase.auth.signOut();
+      const url = request.nextUrl.clone();
+      url.pathname = "/admin/login";
+      url.searchParams.set("error", "not_authorized");
+      url.searchParams.delete("next");
+      return NextResponse.redirect(url);
+    }
+  }
 
   if (isAdminPath && !user) {
     const url = request.nextUrl.clone();
