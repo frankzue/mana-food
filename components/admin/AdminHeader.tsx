@@ -96,42 +96,47 @@ export function AdminHeader({ email }: Props) {
           </div>
         </div>
 
-        <nav className="flex items-center gap-1.5 shrink-0 overflow-x-auto no-scrollbar">
+        {/* Nav compacta:
+            - En móvil, sólo la pestaña ACTIVA muestra su etiqueta (el resto
+              quedan como iconos redondos). Así caben 4 pestañas + Salir en un
+              Samsung S23+ sin cortarse.
+            - En desktop (sm:) todas muestran icono + texto como siempre. */}
+        <nav className="flex items-center gap-1 sm:gap-1.5 shrink-0 overflow-x-auto no-scrollbar">
           {NAV.map((item) => {
             const active = isActive(item);
             const Icon = item.icon;
-            // Config: en móvil se muestra sólo como icono (ahorra espacio);
-            // el resto siempre muestra su etiqueta.
-            const labelOnlyDesktop = item.href === "/admin/settings";
             return (
               <Link
                 key={item.href}
                 href={item.href}
                 className={[
-                  "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition ring-1 whitespace-nowrap",
+                  "inline-flex items-center justify-center gap-1.5 rounded-full py-1.5 text-xs font-semibold transition ring-1 whitespace-nowrap",
                   active
-                    ? "bg-mana-yellow text-mana-ink ring-mana-yellow"
-                    : "bg-white/10 text-white ring-white/20 hover:bg-white/15",
+                    ? "bg-mana-yellow text-mana-ink ring-mana-yellow px-3"
+                    : "bg-white/10 text-white ring-white/20 hover:bg-white/15 px-2 sm:px-3",
                 ].join(" ")}
                 title={item.label}
                 aria-label={item.label}
+                aria-current={active ? "page" : undefined}
               >
-                <Icon className="h-3.5 w-3.5" />
-                <span className={labelOnlyDesktop ? "hidden sm:inline" : ""}>
+                <Icon className="h-3.5 w-3.5 shrink-0" />
+                <span
+                  className={active ? "" : "hidden sm:inline"}
+                >
                   {item.label}
                 </span>
               </Link>
             );
           })}
 
-          <form action="/admin/logout" method="POST" className="ml-1">
+          <form action="/admin/logout" method="POST" className="ml-0.5 sm:ml-1">
             <button
               type="submit"
-              className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-2.5 sm:px-3 py-1.5 text-xs font-semibold text-white ring-1 ring-white/20 hover:bg-white/15 transition"
-              title={email ?? "Salir"}
+              className="inline-flex items-center justify-center gap-1.5 rounded-full bg-white/10 px-2 sm:px-3 py-1.5 text-xs font-semibold text-white ring-1 ring-white/20 hover:bg-white/15 transition"
+              title={email ? `Salir (${email})` : "Salir"}
               aria-label="Salir"
             >
-              <LogOut className="h-3.5 w-3.5" />
+              <LogOut className="h-3.5 w-3.5 shrink-0" />
               <span className="hidden sm:inline">Salir</span>
             </button>
           </form>
