@@ -295,20 +295,77 @@ export function ManualDocument() {
           letter="C"
           eyebrow="Apéndice"
           title="Preguntas frecuentes."
-          lead="Respuestas cortas para el día a día."
+          lead="Respuestas rápidas para clientes, dueños y personal del local."
           icon={<AlertTriangle className="h-6 w-6" />}
         />
 
         <article className="bg-white rounded-2xl shadow-sm ring-1 ring-black/5 p-6 sm:p-8 space-y-5 mb-6">
-          <FAQ q="¿Hay que instalar algo para pedir?" a="No. Solo abrir el enlace en el navegador." />
+          <FAQ q="¿Hay que instalar algo para pedir?" a="No. Solo abrir el enlace de la tienda en el navegador del teléfono o la PC." />
           <FAQ
             q="¿Los precios en bolívares son oficiales ante el fisco?"
-            a="Se calculan con la tasa BCV que configuras en el panel. Es un apoyo para cobrar; la facturación y libros oficiales son independientes."
+            a="Se calculan con la tasa BCV que configuras en el panel. Sirven para orientar al cliente; la facturación y los libros oficiales son un proceso aparte."
           />
-          <FAQ q="¿Se pierden los pedidos si falla internet?" a="Los ya guardados no. Sin conexión no se pueden crear pedidos nuevos hasta que vuelva la red." />
-          <FAQ q="¿Puedo tener varios administradores?" a="Sí: crea varios usuarios en Supabase Auth con el mismo rol." />
-          <FAQ q="¿Cómo actualizo la tasa?" a="Panel → Configuración → Tasa BCV → Guardar." />
-          <FAQ q="¿El cliente puede pedir sin WhatsApp?" a="El pedido se crea igual; el contacto posterior es por el número que dejó (idealmente WhatsApp)." />
+          <FAQ
+            q="¿Se pierden los pedidos si falla internet?"
+            a="Los que ya quedaron guardados en el sistema no. Si no hay conexión, no se pueden enviar pedidos nuevos hasta que vuelva la red."
+          />
+          <FAQ
+            q="¿Los clientes pueden ver el panel de administración?"
+            a="No, a menos que alguien les pase la URL /admin y una cuenta. El menú público no muestra ventas ni datos de otros clientes."
+          />
+          <FAQ
+            q="¿Puedo cambiar precios yo mismo?"
+            a="Sí. Panel → Productos → Editar en cada ítem (precio, costo, texto, mostrar u ocultar). Los cambios se reflejan en la tienda; si algo no se ve, recarga la página o espera unos segundos por caché."
+          />
+          <FAQ
+            q="¿Cómo oculto un producto que se acabó hoy?"
+            a="En Productos usa «Ocultar»; desaparece del menú del cliente pero no se borra. Cuando vuelva a haber, pulsa «Mostrar»."
+          />
+          <FAQ
+            q="¿Qué pasa si olvidé la contraseña del admin?"
+            a="Desde Supabase (Auth → Users) se puede enviar recuperación de contraseña o resetearla quien administre el proyecto. No uses la misma clave en todos los locales."
+          />
+          <FAQ
+            q="¿Puedo tener varios usuarios administradores?"
+            a="Sí: cada trabajador puede tener su propio correo y contraseña en Supabase Auth. Así queda más claro quién opera el panel."
+          />
+          <FAQ q="¿Cómo actualizo la tasa BCV?" a="Panel → Configuración → campo Tasa BCV → Guardar. Revisa que el valor sea el que aplican ese día para cobrar." />
+          <FAQ
+            q="¿El cliente puede hacer el pedido sin WhatsApp?"
+            a="Sí: el pedido se registra con el número que escriba. Lo ideal es que sea el mismo WhatsApp para enviarle el resumen y el comprobante."
+          />
+          <FAQ
+            q="¿Por qué suena cuando entra un pedido?"
+            a="El panel usa un aviso sonoro y visual para que no se pierda un pedido nuevo. Puedes silenciarlo con el control «Sonido» en la lista de pedidos."
+          />
+          <FAQ
+            q="¿Los pedidos aparecen solos o hay que refrescar?"
+            a="Con la conexión en tiempo real activa, suelen aparecer casi al instante. Si algo no se ve, desliza para actualizar o abre de nuevo la pestaña."
+          />
+          <FAQ
+            q="¿Qué es la propina en el checkout?"
+            a="Es un monto opcional en dólares que el cliente puede añadir. Se suma al total y sale en el reporte de ventas como propinas."
+          />
+          <FAQ
+            q="¿Qué diferencia hay entre «Pagado» y «Completado»?"
+            a="«Pagado» = ya confirmaste el pago del cliente. «Completado» = pedido entregado o retirado y cerrado operativamente. Así separas cobro y despacho."
+          />
+          <FAQ
+            q="¿Cómo registro una devolución de dinero?"
+            a="En la tarjeta del pedido, botón Devolución: indicas monto y motivo. El pedido puede quedar marcado como devuelto y se refleja en reportes."
+          />
+          <FAQ
+            q="¿El reporte PDF de ventas o de caja reemplaza mi libro?"
+            a="No. Es un respaldo y una vista rápida. Sigue llevando tu libro y tu facturación como marca la ley y tu contador."
+          />
+          <FAQ
+            q="¿Puedo usar el panel solo en el teléfono?"
+            a="Sí. En Chrome o Edge del Android puedes «instalar» el panel como app (aviso que aparece abajo). En iPhone, Safari → Compartir → Añadir a inicio."
+          />
+          <FAQ
+            q="¿Qué hago si un cliente dice que el total no cuadra?"
+            a="Revisa en el panel el pedido exacto, la zona de envío, propina y la tasa del día. Si la tasa estaba vieja, corrígela para los próximos pedidos y explica la diferencia al cliente."
+          />
         </article>
 
         {/* SECCIÓN D — AVISO LEGAL (énfasis máximo para impresión/PDF) */}
@@ -365,16 +422,25 @@ export function ManualDocument() {
         <article className="mt-6 mb-10 bg-[#1a1a1a] text-white rounded-2xl p-8 sm:p-10 print:rounded-none">
           <div className="flex items-center gap-4 mb-4">
             <div className="relative h-10 w-10 rounded-lg overflow-hidden bg-black ring-1 ring-[#FFC72C]/40">
-              <Image src="/logo.png" alt="Maná" fill sizes="40px" className="object-contain" />
+              <Image src="/logo.png" alt="Maná Fast Food" fill sizes="40px" className="object-contain" />
             </div>
             <div>
-              <p className="text-[11px] font-black uppercase tracking-[0.2em] text-[#FFC72C]">Cierre</p>
-              <h3 className="font-black text-xl leading-none">Gracias por usar Maná</h3>
+              <p className="text-[11px] font-black uppercase tracking-[0.2em] text-[#FFC72C]">
+                Cierre del manual
+              </p>
+              <h3 className="font-black text-xl leading-tight">Fin del documento</h3>
+              <p className="text-[11px] text-white/55 leading-snug mt-1 max-w-xl">
+                <strong className="text-white/80">Maná Fast Food</strong> es el nombre comercial del
+                negocio. Esta guía describe cómo usar la <strong className="text-white/80">herramienta de
+                pedidos</strong> desarrollada para ese negocio; quien programó e instaló el sistema es quien
+                debe brindarte soporte técnico.
+              </p>
             </div>
           </div>
           <p className="text-white/75 leading-relaxed max-w-2xl text-sm">
-            Para soporte técnico contacta a quien te entregó el sistema. Conserva una copia PDF de este
-            manual junto con tus contratos y credenciales en lugar seguro.
+            Para dudas de funcionamiento, cambios técnicos o incidencias, contacta a quien te entregó el
+            proyecto. Conserva una copia PDF de este manual junto con contratos y credenciales en un lugar
+            seguro.
           </p>
           <p className="mt-6 pt-4 border-t border-white/10 text-[11px] text-white/45">
             Documento generado desde la app · Impresión: Ctrl+P / Cmd+P → Guardar como PDF
