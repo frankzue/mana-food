@@ -157,6 +157,7 @@ export function AdminBell() {
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-label={`${count} pendientes`}
+        aria-expanded={open}
         className={[
           "relative inline-flex items-center justify-center rounded-full h-9 w-9 ring-1 transition",
           count > 0
@@ -165,7 +166,7 @@ export function AdminBell() {
         ].join(" ")}
         title="Pendientes"
       >
-        <Bell className={count > 0 ? "h-4 w-4" : "h-4 w-4 opacity-90"} />
+        <Bell className="h-4 w-4" />
         {count > 0 && (
           <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-mana-red text-white text-[10px] font-black leading-[18px] text-center ring-2 ring-mana-black">
             {count > 99 ? "99+" : count}
@@ -173,41 +174,56 @@ export function AdminBell() {
         )}
       </button>
 
+      {/* Popover
+          - En móvil se fija al viewport con márgenes laterales (left-3 / right-3)
+            para que nunca se salga de pantalla.
+          - En sm: vuelve a anclarse a la izquierda del botón (crece hacia la
+            derecha, donde sobra espacio en el header). */}
       {open && (
         <div
           role="dialog"
           aria-label="Pendientes"
-          className="absolute right-0 mt-2 w-[86vw] max-w-sm rounded-2xl bg-white text-mana-ink shadow-mana-glow ring-1 ring-black/10 overflow-hidden z-50"
+          className="fixed left-3 right-3 top-[64px] sm:absolute sm:left-0 sm:right-auto sm:top-full sm:mt-2 sm:w-[22rem] rounded-2xl bg-white text-mana-ink shadow-2xl ring-1 ring-black/5 overflow-hidden z-50"
         >
-          <div className="px-4 py-3 bg-mana-cream-dark border-b border-black/5 flex items-center gap-2">
-            <Bell className="h-4 w-4 text-mana-red" />
-            <h3 className="font-display font-black text-sm">Pendientes</h3>
-            <span className="ml-auto text-[11px] font-semibold text-mana-muted">
-              {count} {count === 1 ? "recordatorio" : "recordatorios"}
+          <div className="px-4 py-3 flex items-center gap-2 border-b border-gray-100">
+            <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-gray-50 text-mana-ink">
+              <Bell className="h-4 w-4" />
             </span>
+            <div className="min-w-0">
+              <h3 className="font-display font-black text-sm leading-tight">
+                Pendientes
+              </h3>
+              <p className="text-[11px] text-gray-500 leading-tight">
+                {count === 0
+                  ? "Al día"
+                  : `${count} ${count === 1 ? "recordatorio" : "recordatorios"}`}
+              </p>
+            </div>
           </div>
 
-          <div className="max-h-[65vh] overflow-y-auto">
+          <div className="max-h-[65vh] overflow-y-auto bg-white">
             {!loaded ? (
-              <div className="p-5 text-center text-sm text-mana-muted">
+              <div className="p-6 text-center text-sm text-gray-400">
                 Cargando…
               </div>
             ) : count === 0 ? (
-              <div className="p-6 text-center">
-                <CheckCircle2 className="h-8 w-8 text-mana-success mx-auto mb-2" />
-                <p className="font-bold text-sm">Todo al día</p>
-                <p className="text-xs text-mana-muted mt-1">
+              <div className="px-6 py-10 text-center">
+                <div className="mx-auto h-12 w-12 rounded-full bg-emerald-50 text-emerald-600 grid place-items-center mb-3">
+                  <CheckCircle2 className="h-6 w-6" />
+                </div>
+                <p className="font-bold text-sm text-mana-ink">Todo al día</p>
+                <p className="text-xs text-gray-500 mt-1">
                   No hay pedidos pendientes en este momento.
                 </p>
               </div>
             ) : (
-              <ul className="divide-y divide-black/5">
+              <ul className="divide-y divide-gray-100">
                 {pendientes.map((p) => (
                   <li key={p.id}>
                     <Link
                       href="/admin"
                       onClick={() => setOpen(false)}
-                      className="block px-4 py-3 hover:bg-mana-cream transition"
+                      className="block px-4 py-3 hover:bg-gray-50 transition"
                     >
                       <PendienteRow p={p} />
                     </Link>
@@ -216,6 +232,18 @@ export function AdminBell() {
               </ul>
             )}
           </div>
+
+          {count > 0 && (
+            <div className="border-t border-gray-100 bg-gray-50/60 px-4 py-2 text-center">
+              <Link
+                href="/admin"
+                onClick={() => setOpen(false)}
+                className="text-[11px] font-bold text-mana-red hover:underline"
+              >
+                Ver todos los pedidos →
+              </Link>
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -224,31 +252,40 @@ export function AdminBell() {
 
 function PendienteRow({ p }: { p: Pendiente }) {
   const { icon, label, tone } = toneFor(p.tipo);
-  const mins = Math.max(0, Math.floor((Date.now() - new Date(p.created_at).getTime()) / 60_000));
+  const mins = Math.max(
+    0,
+    Math.floor((Date.now() - new Date(p.created_at).getTime()) / 60_000)
+  );
   const hace =
-    mins < 1 ? "ahora" : mins < 60 ? `hace ${mins} min` : `hace ${Math.floor(mins / 60)} h ${mins % 60} min`;
+    mins < 1
+      ? "ahora"
+      : mins < 60
+        ? `hace ${mins} min`
+        : `hace ${Math.floor(mins / 60)} h ${mins % 60} min`;
 
   return (
     <div className="flex items-start gap-3">
       <span
-        className={`grid place-items-center h-8 w-8 rounded-full shrink-0 ${tone.bg} ${tone.text}`}
+        className={`grid place-items-center h-9 w-9 rounded-full shrink-0 ring-1 ${tone.bg} ${tone.text} ${tone.ring}`}
         aria-hidden
       >
         {icon}
       </span>
       <div className="min-w-0 flex-1">
-        <div className="flex items-baseline gap-2">
-          <span className="font-display font-black text-sm">
+        <div className="flex items-center gap-2">
+          <span className="font-display font-black text-sm text-mana-ink">
             #{String(p.numero).padStart(4, "0")}
           </span>
-          <span className="text-xs text-mana-muted truncate">
-            · {p.cliente_nombre}
+          <span className="text-xs text-gray-600 truncate">
+            {p.cliente_nombre}
+          </span>
+          <span className="ml-auto text-[10px] text-gray-400 inline-flex items-center gap-1 shrink-0">
+            <Clock className="h-3 w-3" />
+            {hace}
           </span>
         </div>
-        <div className={`text-xs font-semibold ${tone.text}`}>{label}</div>
-        <div className="text-[11px] text-mana-muted inline-flex items-center gap-1 mt-0.5">
-          <Clock className="h-3 w-3" />
-          {hace}
+        <div className={`text-[12.5px] font-semibold mt-0.5 ${tone.text}`}>
+          {label}
         </div>
       </div>
     </div>
@@ -260,20 +297,32 @@ function toneFor(tipo: Pendiente["tipo"]) {
     case "nuevo":
       return {
         icon: <Bell className="h-4 w-4" />,
-        label: "Nuevo pedido — contactar al cliente",
-        tone: { bg: "bg-mana-red/10", text: "text-mana-red" },
+        label: "Contactar al cliente",
+        tone: {
+          bg: "bg-rose-50",
+          text: "text-rose-600",
+          ring: "ring-rose-100",
+        },
       };
     case "pago_pendiente":
       return {
         icon: <AlertTriangle className="h-4 w-4" />,
         label: "Esperando confirmación de pago",
-        tone: { bg: "bg-amber-100", text: "text-amber-700" },
+        tone: {
+          bg: "bg-amber-50",
+          text: "text-amber-700",
+          ring: "ring-amber-100",
+        },
       };
     case "entrega_pendiente":
       return {
         icon: <AlertTriangle className="h-4 w-4" />,
-        label: "Pagado — falta marcar entregado",
-        tone: { bg: "bg-blue-100", text: "text-blue-700" },
+        label: "Pagado · falta marcar entregado",
+        tone: {
+          bg: "bg-sky-50",
+          text: "text-sky-700",
+          ring: "ring-sky-100",
+        },
       };
   }
 }
