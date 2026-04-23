@@ -46,16 +46,14 @@ export function getPaymentInstructions(
 }
 
 /**
- * Mensaje completo para WhatsApp.
+ * Mensaje completo para WhatsApp — versión compacta.
  *
- * Diseño (claridad ante todo):
- *  · Cada monto en su propia línea (USD y Bs nunca "pegados" con ·).
- *  · "Total a pagar" separado visualmente con USD grande y la conversión
- *    en Bs debajo entre paréntesis → imposible confundir las cifras.
- *  · En el bloque de pago repetimos "Monto a pagar" por si el cliente solo
- *    lee esa sección al momento de transferir.
- *  · Cierre profesional: lista de verificación ANTES del pago +
- *    instrucciones claras si necesita cambios.
+ * Principios de diseño:
+ *  · Cabe en una sola pantalla de celular (≈20 líneas).
+ *  · USD y Bs siempre en líneas separadas (nunca pegados con "·").
+ *  · Total presentado UNA sola vez con las dos monedas claramente distintas.
+ *  · Sin líneas decorativas largas que ocupan espacio sin aportar.
+ *  · CTA claro: "paga y envía comprobante" o "avisa antes si algo no cuadra".
  */
 export function buildWhatsAppMessage(
   pedido: PedidoConItems,
@@ -68,21 +66,20 @@ export function buildWhatsAppMessage(
   const propina = Number(pedido.propina_usd ?? 0);
   const esDelivery = pedido.zona_id != null;
   const numero = String(pedido.numero).padStart(4, "0");
+  const primerNombre = firstName(pedido.cliente_nombre);
 
   const L: string[] = [];
 
-  // Saludo
-  L.push(`Hola ${pedido.cliente_nombre} 👋`);
-  L.push("");
+  // 1) Saludo + confirmación (compacto en 2 líneas)
   L.push(
-    `Soy del equipo de *${businessName}*. Recibimos tu pedido *#${numero}* correctamente. 🍔`
+    `Hola ${pedido.cliente_nombre} 👋 Soy del equipo de *${businessName}*.`
   );
   L.push(
-    "Antes de procesarlo, por favor revisa los siguientes datos para confirmar que todo esté en orden."
+    `Recibimos tu pedido *#${numero}* 🍔 — revisa los datos antes de pagar:`
   );
   L.push("");
 
-  // 1) DETALLE
+  // 2) Productos
   L.push("*🧾 Tu pedido:*");
   for (const it of pedido.items) {
     L.push(
@@ -93,81 +90,52 @@ export function buildWhatsAppMessage(
   }
   L.push("");
 
-  // 2) ENTREGA
+  // 3) Entrega + desglose corto (una línea por concepto)
   L.push(
-    `*📍 Entrega:*  ${
+    `*📍 Entrega:* ${
       esDelivery
         ? `Delivery → ${pedido.zona_nombre}`
         : `Retiro en tienda (${pedido.zona_nombre})`
     }`
   );
   if (pedido.notas && pedido.notas.trim()) {
-    L.push(`*📝 Nota:*  ${pedido.notas.trim()}`);
+    L.push(`*📝 Nota:* ${pedido.notas.trim()}`);
   }
-  L.push("");
-
-  // 3) DESGLOSE DE PAGO
-  L.push("*🧮 Desglose:*");
   L.push(
-    `   Subtotal  —  ${formatUSD(Number(pedido.subtotal_usd))}  _(IVA incluido)_`
+    `*🧮 Subtotal:* ${formatUSD(Number(pedido.subtotal_usd))} _(IVA incluido)_`
   );
-  L.push(
-    `   Envío     —  ${formatUSD(Number(pedido.envio_usd))}`
-  );
+  L.push(`*🚚 Envío:*    ${formatUSD(Number(pedido.envio_usd))}`);
   if (propina > 0) {
-    L.push(`   Propina   —  ${formatUSD(propina)}  🙌`);
+    L.push(`*🙌 Propina:*  ${formatUSD(propina)}`);
   }
   L.push("");
 
-  // 4) TOTAL — presentado en dos líneas, muy legible
-  L.push("━━━━━━━━━━━━━━━━━━━━");
-  L.push(`*💵 TOTAL A PAGAR:*   *${formatUSD(totalUsd)}*`);
-  L.push(`_Al cambio BCV:_      *${formatBs(totalBs)}*`);
-  L.push(`_Tasa del día:_        1 USD  =  ${tasaBs.toFixed(2)} Bs`);
-  L.push("━━━━━━━━━━━━━━━━━━━━");
+  // 4) TOTAL — bloque único, cifras separadas, tasa como subnota
+  L.push("*💵 TOTAL A PAGAR*");
+  L.push(`   USD:  *${formatUSD(totalUsd)}*`);
+  L.push(`   Bs:   *${formatBs(totalBs)}*`);
+  L.push(`   _Tasa BCV: 1 USD = ${tasaBs.toFixed(2)} Bs_`);
   L.push("");
 
-  // 5) MÉTODO + DATOS DE PAGO
-  L.push(`*💳 Método de pago:*  ${pedido.metodo_pago}`);
+  // 5) Método + datos de pago (sin repetir el total)
+  L.push(`*💳 Método:* ${pedido.metodo_pago}`);
   if (payment) {
     const pagoInfo = getPaymentInstructions(pedido.metodo_pago, payment);
     if (pagoInfo) {
-      L.push("");
-      L.push("*Datos para realizar el pago:*");
       L.push(pagoInfo);
-      L.push("");
-      // Repetimos el monto en el bloque de pago, con cifras separadas
-      // en líneas distintas para máxima claridad.
-      L.push("*👉 Monto exacto a transferir:*");
-      L.push(`   •  En dólares:    *${formatUSD(totalUsd)}*`);
-      L.push(`   •  En bolívares:  *${formatBs(totalBs)}*`);
     }
   }
+  L.push("");
 
-  // 6) CIERRE — checklist + instrucciones
-  L.push("");
-  L.push("─────────────────────");
-  L.push("*Por favor confirma que todo esté correcto:*");
-  L.push("");
-  L.push("  ✅  Productos y cantidades");
+  // 6) CTA condensado en 2 líneas (una positiva, una de excepción)
   L.push(
-    esDelivery
-      ? "  ✅  Dirección y zona de entrega"
-      : "  ✅  Hora para retirar el pedido"
+    "✅ Si todo está bien, paga y envíanos el *comprobante* por este chat."
   );
-  L.push("  ✅  Método de pago y monto");
-  L.push("");
   L.push(
-    "👉 Si *todo* está correcto, realiza el pago y envíanos el *comprobante* por este mismo chat. Con eso confirmamos y despachamos."
+    "⚠️ Si algo no cuadra (producto, dirección, monto), avísanos *antes* de pagar."
   );
   L.push("");
-  L.push(
-    "⚠️ Si necesitas *ajustar algo* (producto, dirección, hora, método), respóndenos *antes* de pagar y lo cambiamos sin problema."
-  );
-  L.push("");
-  L.push(
-    `¡Gracias por elegirnos, ${firstName(pedido.cliente_nombre)}! 🙌`
-  );
+  L.push(`¡Gracias, ${primerNombre}! 🙌`);
 
   return L.join("\n");
 }

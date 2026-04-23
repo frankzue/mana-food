@@ -12,6 +12,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { AdminBell } from "./AdminBell";
+import { PWAInstallPrompt } from "./PWAInstallPrompt";
 
 type Props = {
   email: string | null | undefined;
@@ -147,6 +148,10 @@ export function AdminHeader({ email }: Props) {
           </form>
         </nav>
       </div>
+      {/* Popup de "instala la app en tu teléfono". Se auto-oculta si ya está
+          instalado, si el usuario lo descartó hace <7 días, o si no está en
+          un navegador compatible. */}
+      <PWAInstallPrompt />
     </header>
   );
 }

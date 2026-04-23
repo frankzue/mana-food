@@ -58,6 +58,10 @@ const config: Config = {
           "60%": { transform: "scale(1.05)", opacity: "1" },
           "100%": { transform: "scale(1)", opacity: "1" },
         },
+        "slide-up": {
+          "0%": { opacity: "0", transform: "translateY(24px)" },
+          "100%": { opacity: "1", transform: "translateY(0)" },
+        },
         shimmer: {
           "0%": { backgroundPosition: "-200% 0" },
           "100%": { backgroundPosition: "200% 0" },
@@ -66,6 +70,7 @@ const config: Config = {
       animation: {
         "fade-in-up": "fade-in-up 0.4s ease-out",
         "bounce-in": "bounce-in 0.4s ease-out",
+        "slide-up": "slide-up 0.35s cubic-bezier(0.22, 1, 0.36, 1)",
         shimmer: "shimmer 2s linear infinite",
       },
     },
