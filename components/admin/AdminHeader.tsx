@@ -11,6 +11,7 @@ import {
   Users,
   type LucideIcon,
 } from "lucide-react";
+import { AdminBell } from "./AdminBell";
 
 type Props = {
   email: string | null | undefined;
@@ -75,7 +76,7 @@ export function AdminHeader({ email }: Props) {
   return (
     <header className="sticky top-0 z-40 bg-mana-black text-white shadow-mana-soft print:hidden">
       <div className="container flex items-center justify-between gap-3 py-3">
-        <div className="flex items-center gap-3 min-w-0">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
           <div className="relative h-10 w-10 shrink-0 rounded-xl overflow-hidden bg-mana-black ring-2 ring-mana-yellow/40">
             <Image
               src="/logo.png"
@@ -94,6 +95,10 @@ export function AdminHeader({ email }: Props) {
               Pedidos en tiempo real
             </p>
           </div>
+          {/* Campana de pendientes: nuevos + pagos/entregas olvidadas.
+              Se renderiza al lado del logo para ser lo primero que ve el
+              trabajador al abrir el panel. */}
+          <AdminBell />
         </div>
 
         {/* Nav compacta:

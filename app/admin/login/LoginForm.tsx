@@ -106,9 +106,6 @@ export function LoginForm() {
             </button>
           </form>
 
-          <p className="text-[11px] text-mana-muted text-center mt-4">
-            Crea el usuario admin en Supabase → Auth → Users.
-          </p>
         </div>
       </div>
     </main>

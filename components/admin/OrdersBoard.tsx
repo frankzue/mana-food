@@ -348,8 +348,12 @@ export function OrdersBoard({
 }
 
 /**
- * Patrón de sonido más notorio: 3 pings ascendentes.
- * Se arma con Web Audio; no requiere archivos externos.
+ * Notificación tipo campana musical: 3 notas de un arpegio mayor
+ * (E5 → B5 → E6) con ataque rápido y decaimiento largo tipo "bell".
+ *
+ * Se arma con Web Audio (sin archivos externos). Cada nota mezcla el
+ * tono fundamental + su octava superior con ganancias distintas para
+ * imitar el timbre de una campanita bonita en vez de un beep electrónico.
  */
 function playAlertPattern() {
   try {
@@ -358,26 +362,63 @@ function playAlertPattern() {
     if (!AudioCtx) return;
     const ctx: AudioContext = new AudioCtx();
     const now = ctx.currentTime;
-    const beeps: { at: number; f1: number; f2: number; dur: number }[] = [
-      { at: 0.0, f1: 880, f2: 1320, dur: 0.22 },
-      { at: 0.28, f1: 980, f2: 1480, dur: 0.22 },
-      { at: 0.58, f1: 1100, f2: 1760, dur: 0.32 },
+
+    // Compresor suave para que no se empaste ni sature
+    const master = ctx.createGain();
+    master.gain.value = 0.55;
+    master.connect(ctx.destination);
+
+    // Notas del acorde: E5, B5, E6 (quinta justa + octava). Suena agradable
+    // y claro sin ser estridente — tipo notificación moderna.
+    const notes = [
+      { at: 0.0, freq: 659.25 }, // E5
+      { at: 0.14, freq: 987.77 }, // B5
+      { at: 0.3, freq: 1318.51 }, // E6
     ];
-    for (const b of beeps) {
-      const o = ctx.createOscillator();
-      const g = ctx.createGain();
-      o.type = "sine";
-      o.frequency.setValueAtTime(b.f1, now + b.at);
-      o.frequency.exponentialRampToValueAtTime(b.f2, now + b.at + b.dur * 0.75);
-      g.gain.setValueAtTime(0.0001, now + b.at);
-      g.gain.exponentialRampToValueAtTime(0.35, now + b.at + 0.02);
-      g.gain.exponentialRampToValueAtTime(0.0001, now + b.at + b.dur);
-      o.connect(g);
-      g.connect(ctx.destination);
-      o.start(now + b.at);
-      o.stop(now + b.at + b.dur + 0.05);
+
+    for (const n of notes) {
+      playBellNote(ctx, master, n.freq, n.at);
     }
   } catch {
     // silent
   }
+}
+
+/**
+ * Sintetiza una nota tipo "bell" con dos osciladores (fundamental + octava)
+ * y una envolvente ADSR corta para lograr el clásico "ding" limpio.
+ */
+function playBellNote(
+  ctx: AudioContext,
+  dest: AudioNode,
+  freq: number,
+  when: number
+) {
+  const now = ctx.currentTime;
+  const t0 = now + when;
+  const dur = 0.9;
+
+  // Fundamental (sinusoidal, limpia)
+  const osc = ctx.createOscillator();
+  osc.type = "sine";
+  osc.frequency.setValueAtTime(freq, t0);
+  const gain = ctx.createGain();
+  gain.gain.setValueAtTime(0.0001, t0);
+  gain.gain.exponentialRampToValueAtTime(0.32, t0 + 0.008); // ataque rápido
+  gain.gain.exponentialRampToValueAtTime(0.0001, t0 + dur); // decaimiento largo
+  osc.connect(gain).connect(dest);
+  osc.start(t0);
+  osc.stop(t0 + dur + 0.02);
+
+  // Armónico (octava superior, más suave) → brillo metálico de campana
+  const harm = ctx.createOscillator();
+  harm.type = "sine";
+  harm.frequency.setValueAtTime(freq * 2, t0);
+  const hGain = ctx.createGain();
+  hGain.gain.setValueAtTime(0.0001, t0);
+  hGain.gain.exponentialRampToValueAtTime(0.1, t0 + 0.004);
+  hGain.gain.exponentialRampToValueAtTime(0.0001, t0 + dur * 0.6);
+  harm.connect(hGain).connect(dest);
+  harm.start(t0);
+  harm.stop(t0 + dur * 0.6 + 0.02);
 }
