@@ -15,24 +15,25 @@ export const metadata = {
 
 export default async function AdminCajaPage() {
   const supabase = createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
 
-  const settings = await getSettings();
-
-  // Últimos 400 pedidos (cubre varios días)
-  const { data: pedidos } = await supabase
-    .from("pedidos")
-    .select("*")
-    .order("created_at", { ascending: false })
-    .limit(400);
-
-  const { data: cierres } = await supabase
-    .from("cierres_caja")
-    .select("*")
-    .order("fecha", { ascending: false })
-    .limit(60);
+  // Paralelizamos las 4 consultas independientes
+  const [userRes, settings, pedidosRes, cierresRes] = await Promise.all([
+    supabase.auth.getUser(),
+    getSettings(),
+    supabase
+      .from("pedidos")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(400),
+    supabase
+      .from("cierres_caja")
+      .select("*")
+      .order("fecha", { ascending: false })
+      .limit(60),
+  ]);
+  const user = userRes.data.user;
+  const pedidos = pedidosRes.data;
+  const cierres = cierresRes.data;
 
   return (
     <>

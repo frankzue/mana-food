@@ -16,17 +16,20 @@ export const metadata = {
 
 export default async function AdminPage() {
   const supabase = createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
 
-  const settings = await getSettings();
-
-  const { data: pedidos } = await supabase
-    .from("pedidos")
-    .select("*")
-    .order("created_at", { ascending: false })
-    .limit(100);
+  // Paralelizamos las 3 consultas independientes para reducir latencia:
+  // antes iban en serie (~3x más lento en redes con ping alto a Supabase).
+  const [userRes, settings, pedidosRes] = await Promise.all([
+    supabase.auth.getUser(),
+    getSettings(),
+    supabase
+      .from("pedidos")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(100),
+  ]);
+  const user = userRes.data.user;
+  const pedidos = pedidosRes.data;
 
   const ids = (pedidos ?? []).map((p) => p.id);
   let itemsByPedido: Record<string, PedidoItem[]> = {};

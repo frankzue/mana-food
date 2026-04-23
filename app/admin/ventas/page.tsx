@@ -13,29 +13,32 @@ export const metadata = {
   title: "Panel · Ventas y reportes",
 };
 
-const MAX_PEDIDOS = 5000;
+// Tope razonable: 1500 pedidos cubren varios meses de histórico.
+// Antes eran 5000, pero traer + ordenar ese volumen + sus items añadía
+// segundos innecesarios a cada visita. Si algún día se supera, se pagina.
+const MAX_PEDIDOS = 1500;
 
 export default async function AdminVentasPage() {
   const supabase = createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
 
-  const settings = await getSettings();
-
-  // Traemos todo el histórico (tope 5000) con sus items para poder calcular
-  // top productos y hacer filtros por fecha en cliente.
-  const { data: pedidos } = await supabase
-    .from("pedidos")
-    .select("*")
-    .order("created_at", { ascending: false })
-    .limit(MAX_PEDIDOS);
+  // Paralelizamos user, settings, pedidos y productos (son independientes)
+  const [userRes, settings, pedidosRes, productosCostoRes] = await Promise.all([
+    supabase.auth.getUser(),
+    getSettings(),
+    supabase
+      .from("pedidos")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(MAX_PEDIDOS),
+    supabase.from("productos").select("nombre, precio_usd, costo_usd"),
+  ]);
+  const user = userRes.data.user;
+  const pedidos = pedidosRes.data;
+  const productosCosto = productosCostoRes.data;
 
   const ids = (pedidos ?? []).map((p: Pedido) => p.id);
   let itemsByPedido: Record<string, PedidoItem[]> = {};
   if (ids.length > 0) {
-    // Supabase limita por defecto a 1000 filas; para 5000 pedidos podemos
-    // necesitar múltiples fetches. Por ahora tope simple.
     const { data: items } = await supabase
       .from("pedido_items")
       .select("*")
@@ -45,10 +48,6 @@ export default async function AdminVentasPage() {
     }
   }
 
-  // Productos con costo para calcular margen (opcional; columna existe desde migración 006)
-  const { data: productosCosto } = await supabase
-    .from("productos")
-    .select("nombre, precio_usd, costo_usd");
   const productosCostoMap: Record<string, ProductoCostEntry> = {};
   for (const p of (productosCosto ?? []) as any[]) {
     productosCostoMap[p.nombre] = {

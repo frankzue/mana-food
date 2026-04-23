@@ -11,19 +11,21 @@ export const metadata = {
   title: "Panel · Clientes",
 };
 
-const MAX_PEDIDOS = 5000;
+const MAX_PEDIDOS = 1500;
 
 export default async function AdminClientesPage() {
   const supabase = createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
 
-  const { data: pedidos } = await supabase
-    .from("pedidos")
-    .select("*")
-    .order("created_at", { ascending: false })
-    .limit(MAX_PEDIDOS);
+  const [userRes, pedidosRes] = await Promise.all([
+    supabase.auth.getUser(),
+    supabase
+      .from("pedidos")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(MAX_PEDIDOS),
+  ]);
+  const user = userRes.data.user;
+  const pedidos = pedidosRes.data;
 
   return (
     <>

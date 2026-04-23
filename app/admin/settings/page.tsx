@@ -13,11 +13,12 @@ export const metadata = {
 
 export default async function AdminSettingsPage() {
   const supabase = createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
 
-  const settings = await getSettings();
+  const [userRes, settings] = await Promise.all([
+    supabase.auth.getUser(),
+    getSettings(),
+  ]);
+  const user = userRes.data.user;
 
   return (
     <>
